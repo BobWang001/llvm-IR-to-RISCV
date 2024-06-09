@@ -9,7 +9,9 @@
 #include <algorithm>
 #include <functional>
 #include <string>
+#include <sstream>
 #include <fstream>
+#include <bitset>
 /*type of variables*/
 #define type_variables std::string
 #define type_registers int
@@ -83,38 +85,92 @@ using namespace std;
 /*register*/
 struct Register
 {
-	bool uesd,modified;//ĞŞ¸ÄÎ»
-	type_variables name;//¶ÔÓ¦±äÁ¿Ãû
-}reg[num_registers];
+	bool uesd,modified;//æœ‰æ•ˆä½,ä¿®æ”¹ä½
+	type_variables name;//å¯¹åº”å˜é‡å
+};
 
-/*·ûºÅ±í*/
+/*ç¬¦å·è¡¨*/
 struct variable_table
 {
-	int num,num_reg;//±àºÅ,¶ÔÓ¦µÄ¼Ä´æÆ÷±àºÅ
-	bool type;//ÀàĞÍ(int,float)
-	type_variables name;//±äÁ¿Ãû
+	int num, dim, num_reg, cnt;//ç¼–å·,ç»´åº¦,å¯¹åº”çš„å¯„å­˜å™¨ç¼–å·,å˜é‡çš„æ•°é‡
+	bool type;//ç±»å‹(int,float)
+	type_variables name;//å˜é‡å
+	vector<int>size, val;//æ¯ä¸ªç»´åº¦çš„å¤§å°,æ¯ä¸ªå•ä½çš„å€¼
 	variable_table* next;
-}*local,*global;//¾Ö²¿,È«¾Ö
-int total_global=0;//´æ´¢È«¾Ö±äÁ¿µÄÊıÁ¿
-map<type_variables, int>rev_local, rev_global;
+	variable_table()
+	{
+		dim = 0;
+		cnt = 1;
+		num_reg = -1;
+		next = NULL;
+	}
+};//å…¨å±€
 
-/*Ö¸Áî·­Òë*/
+/*æŒ‡ä»¤ç¿»è¯‘*/
 struct instruction
 {
-	int num;//Ö¸Áî±àºÅ
-	int op;//Ö¸ÁîÀàĞÍ
-	int Rd,Rs1,Rs2;//±äÁ¿±àºÅ£ºÄ¿µÄ£¬Ô´1£¬Ô´2
-	bool fRd,fRs1,fRs2;//±äÁ¿ÀàĞÍ£º¾Ö²¿£¬È«¾Ö
-	type_label L1, L2;//Ìø×ª±êºÅ
-	int imm;//Æ«ÒÆÁ¿£¬ÓÃÓÚGEPÖ¸Áî
+	int num;//æŒ‡ä»¤ç¼–å·
+	int op;//æŒ‡ä»¤ç±»å‹
+	int Rd, Rs1, Rs2;//å˜é‡ç¼–å·ï¼šç›®çš„ï¼Œæº1ï¼Œæº2
+	bool fRd, fRs1, fRs2;//å˜é‡ç±»å‹ï¼šå±€éƒ¨ï¼Œå…¨å±€
+	type_label L1, L2;//è·³è½¬æ ‡å·
+	int imm;//åç§»é‡ï¼Œç”¨äºGEPæŒ‡ä»¤
 	instruction* next;
+	instruction()
+	{
+		next = NULL;
+	}
 };
 
 /*basic block*/
 struct basic_block
 {
-	int num;//bb±àºÅ
-	int l, r;//ÆğÖ¹Ö¸Áî±àºÅ
-	vector<int>edge;//Á¬±ß
+	int num;//bbç¼–å·
+	int l, r;//èµ·æ­¢æŒ‡ä»¤ç¼–å·
+	vector<int>edge;//è¿è¾¹
 	basic_block* next;
+	basic_block()
+	{
+		next = NULL;
+	}
 };
+
+/*functions*/
+struct functions
+{
+	int num, cnt_ins, cnt_bb, actual_cnt, formal_cnt, arg_cnt, size;//å‡½æ•°ç¼–å·,æŒ‡ä»¤æ•°,bbæ•°,å®å‚æ•°é‡,å½¢å‚æ•°é‡,å‚æ•°æ•°é‡,æ‰€éœ€çš„æ ˆç©ºé—´å¤§å°
+	type_label name;//å‡½æ•°åç§°
+	vector<pair<type_variables, bool> >args;//å‚æ•°åŠå…¶ç±»å‹
+	instruction* ins_head;//æŒ‡ä»¤å¤´æŒ‡é’ˆ
+	basic_block* bb_head;//bbå¤´æŒ‡é’ˆ
+	variable_table* local, * now_var;//å±€éƒ¨å˜é‡è¡¨
+	map<type_variables, int>map_local;//å˜é‡ååˆ°ç¼–å·çš„æ˜ å°„
+	functions* pre, * next;
+	functions()
+	{
+		cnt_ins = 0, cnt_bb = 0; actual_cnt = 0; formal_cnt = 0; arg_cnt = 0; size = 0;
+		ins_head = NULL;
+		bb_head = NULL;
+		now_var = local;
+	}
+};
+
+/*definitions*/
+extern Register reg[num_registers];
+
+extern variable_table* global, * global_tail;
+extern int total_global;//å­˜å‚¨å…¨å±€å˜é‡çš„æ•°é‡
+extern map<type_variables, int>map_global;//å˜é‡ååˆ°ç¼–å·çš„æ˜ å°„
+
+extern instruction* start;//å±äºå…¨å±€çš„æŒ‡ä»¤
+extern map<std::string, int>ins_num;
+
+extern functions* func_head, * func_tail;
+extern map<type_label, int>map_function;
+
+/*function names*/
+int floatToBinary(float num);
+void read(int option, std::string line, functions* num, bool in_func);
+void new_global(std::string line);
+void new_global_type(variable_table* new_global, std::string word);
+void new_global_value(variable_table* new_global, std::string word);
