@@ -4,6 +4,8 @@ extern int total_global;//存储全局变量的数量
 extern variable_table* global, * global_tail;
 extern int tot_instructions;//总的指令数
 extern map<std::string, int>cond_num;
+extern map<type_label, int>label_num;
+extern int tot_label;
 
 unsigned int floatToBinary(float num)//将浮点数转换为对应的二进制数
 {
@@ -130,7 +132,6 @@ void new_variable(int op, std::string line, variable_table* tail, functions* num
 	printf(";%s\n", line.c_str());
 
 	variable_table* new_variable = new variable_table;
-	new_variable->num = total_global+1;//记录编号
 	bool is_ins = 0, name = 0, size_type = 0, val = 0;//标记是否已经找到了全局变量的名称，大小类型，初始值
 	int len = line.length();
 	for (int p = 0; p < len; )
@@ -208,6 +209,7 @@ void new_variable(int op, std::string line, variable_table* tail, functions* num
 	}
 	if (!is_ins)
 		return;
+	new_variable->num = total_global + 1;//记录编号
 	if (op)
 		num_func->map_local[new_variable->name] = new_variable->num;
 	else map_global[new_variable->name] = new_variable->num;
@@ -391,8 +393,146 @@ void new_store(int op, std::string line, functions* num_func)
 
 }
 
+vector<int> get_size(std::string name, functions* num_func)
+{
+	vector<int>ret;
+	if (map_global.count(name) != 0)
+	{
+		variable_table* head = global;
+		while (head->next != NULL)
+		{
+			head = head->next;
+			if (head->name == name)
+			{
+				for (auto it : head->size)
+					ret.push_back(it);
+				return ret;
+			}
+		}
+	}
+	else
+	{
+		variable_table* head = num_func->local_head;
+		while (head->next != NULL)
+		{
+			head = head->next;
+			if (head->name == name)
+			{
+				for (auto it : head->size)
+					ret.push_back(it);
+				return ret;
+			}
+		}
+	}
+	return ret;
+}
+
 void new_GEP(int op, std::string line, functions* num_func)
 {
+
+	printf(";%s\n", line.c_str());
+
+	instruction* new_gep = new instruction;
+	bool is_ins = 0, fRd = 0, fRs = 0;//标记是否已经找到了目的变量，源变量
+	int len = line.length();
+	variable_table* new_variable;
+	vector<int>size, size_gep;
+	for (int p = 0; p < len; )
+	{
+		if (line[p] == ' ' || line[p] == 9 || line[p] == '*')
+		{
+			p++;
+			continue;
+		}
+		if (line[p] == ';')
+			break;
+		/*获得单词：除了存在中括号进行括号匹配以外，其他均为读到空格停止*/
+		is_ins = 1;
+		std::string word;
+		word.push_back(line[p]);
+		bool bracket = 0;
+		switch (line[p])
+		{
+			case '[':
+			{
+				bracket = 1;
+				int top = 1;
+				while (top)
+				{
+					p++;
+					if (line[p] == '[')
+						top++;
+					else if (line[p] == ']')
+						top--;
+				}
+				if (line[p] == ']')
+					p++;
+				break;
+			}
+			default:
+			{
+				p++;
+				while (p < len && line[p] != ' ' && line[p] != ';')
+				{
+					word.push_back(line[p]);
+					p++;
+				}
+				break;
+			}
+		}
+		if (bracket)
+			continue;
+		if (word == "=" || word == "getelementptr")
+			continue;
+		if (!fRd)
+		{
+			if (map_global.count(word) != 0)
+				new_gep->Rd = map_global[word];
+			else if (num_func->map_local.count(word) != 0)
+				new_gep->Rd = num_func->map_local[word];
+			else//之前没有给该变量分配空间的话就分配一个局部变量
+			{
+				++num_func->total_actual;
+				new_variable = get_new_local(num_func, word);
+				new_gep->Rd = num_func->map_local[word];
+			}
+			fRd = 1;
+		}
+		else if (!fRs)
+		{
+			if (map_global.count(word) != 0)
+				new_gep->Rs1 = map_global[word];
+			else
+				new_gep->Rs1 = num_func->map_local[word];
+			size = get_size(word, num_func);
+			fRs = 1;
+		}
+		else
+		{
+			if (word[0] >= '0' && word[0] <= '9')
+				size_gep.push_back(atoi(word.c_str()));
+		}
+	}
+	if (!is_ins)
+		return;
+	num_func->cnt_ins++;
+	new_gep->num = ++tot_instructions;
+	new_gep->op = op;
+	int imm = 0, res = 1;
+	for (auto it : size)
+		res *= it;
+	int nw = 0;
+	for (auto it : size)
+	{
+		res /= it;
+		imm += res * size_gep[nw];
+		nw++;
+	}
+	new_gep->imm = imm;
+	insert_instruction(num_func, new_gep);
+
+	printf(";Rd=%d Rs=%d imm=%d\n", new_gep->Rd, new_gep->Rs1, new_gep->imm);
+	printf("\n");
 
 }
 
@@ -615,6 +755,77 @@ void new_xcmp(int op, std::string line, functions* num_func)
 void new_branch(int op, std::string line, functions* num_func)
 {
 
+	printf(";%s\n", line.c_str());
+
+	instruction* new_branch = new instruction;
+	bool is_ins = 0, cond = 0, label1 = 0, label2 = 0;//标记是否已经找到了转移条件，为真转移目的地，为假转移目的地
+	int len = line.length();
+	for (int p = 0; p < len; )
+	{
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
+		{
+			p++;
+			continue;
+		}
+		if (line[p] == ';')
+			break;
+		/*获得单词：除了存在中括号进行括号匹配以外，其他均为读到空格停止*/
+		is_ins = 1;
+		std::string word;
+		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
+		{
+			word.push_back(line[p]);
+			p++;
+		}
+		if (word == "br")
+			continue;
+		if (word == "i1")
+		{
+			new_branch->branch_flag = 1;//条件跳转
+			continue;
+		}
+		if (word == "label")
+		{
+			if (!new_branch->branch_flag)
+			{
+				cond = label2 = 1;
+			}
+			continue;
+		}
+		if (!cond)
+		{
+			if (map_global.count(word) != 0)
+				new_branch->Rs1 = map_global[word];
+			else
+				new_branch->Rs1 = num_func->map_local[word];
+			cond = 1;
+		}
+		else if (!label1)
+		{
+			new_branch->L1 = label_num[word];
+			label1 = 1;
+		}
+		else if (!label2)
+		{
+			new_branch->L2 = label_num[word];
+			label2 = 1;
+		}
+	}
+	if (!is_ins)
+		return;
+	num_func->cnt_ins++;
+	new_branch->num = ++tot_instructions;
+	new_branch->op = op;
+	insert_instruction(num_func, new_branch);
+
+	printf(";contion=%d ", (new_branch->branch_flag) ? 1 : 0);
+	if (new_branch->branch_flag)
+		printf("i1=%d ", new_branch->Rs1);
+	printf("label1=%d ", new_branch->L1);
+	if (new_branch->branch_flag)
+		printf("label2=%d ", new_branch->L2);
+	printf("\n\n");
+
 }
 
 /*获取call指令的参数列表*/
@@ -731,6 +942,7 @@ void new_call(int op, std::string line, functions* num_func)
 	num_func->cnt_ins++;
 	new_call->num = ++tot_instructions;
 	new_call->op = op;
+	num_func->max_formal = max(num_func->max_formal, new_call->tot_formal);
 	insert_instruction(num_func, new_call);
 
 	printf(";type=%d arg_cnt=%d ", new_call->type_ret, new_call->tot_formal);
@@ -931,7 +1143,7 @@ void end_function(functions* now_function)
 		imm += (head->cnt << 2);
 	}
 
-	printf(";size=%d\n", now_function->size);
+	printf(";size=%d formal_num=%d max_num=%d\n", now_function->size, now_function->total_formal, now_function->max_formal);
 	head = now_function->local_head;
 	while (head->next != NULL)
 	{
