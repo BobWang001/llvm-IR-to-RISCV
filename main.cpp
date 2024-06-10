@@ -8,6 +8,9 @@ instruction* start = new instruction;//属于全局的指令
 map<std::string, int>ins_num, cond_num;
 int tot_instructions;//总的指令数
 
+map<type_label, int>label_num;
+int tot_label = 0;
+
 functions* func_head = new functions, * func_tail = new functions;
 map<type_label, int>map_function;
 int tot_functions;//总的函数数
@@ -36,7 +39,7 @@ void init_definition()//初始化定义
 int main()
 {
 	init_definition();
-	std::ifstream file("test_f.ll");//打开文件
+	std::ifstream file("test.ll");//打开文件
 	if (!file.is_open())
 	{
 		std::cerr << "无法打开文件" << std::endl;
@@ -65,7 +68,7 @@ int main()
 			}
 		}
 	}
-	std::ifstream file_2("test_f.ll");
+	std::ifstream file_2("test.ll");
 	while (getline(file_2, line))//逐行读入
 	{
 		std::istringstream word(line);
