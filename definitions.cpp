@@ -7,7 +7,7 @@ extern int total_global;//存储全局变量的数量
 extern map<type_variables, int>map_global;//变量名到编号的映射
 
 extern instruction* start;//属于全局的指令
-extern map<std::string, int>ins_num;
+extern map<std::string, int>ins_num, cond_num;
 extern int tot_instructions;//总的指令数
 
 extern functions* func_head, * func_tail;
