@@ -95,7 +95,7 @@ struct variable_table
 	int num, dim, num_reg, cnt;//编号,维度,对应的寄存器编号,变量的数量
 	bool type;//类型(int,float)
 	type_variables name;//变量名
-	vector<int>size, val;//每个维度的大小,每个单位的值
+	vector<unsigned int>size, val;//每个维度的大小,每个单位的值
 	variable_table* next;
 	variable_table()
 	{
@@ -113,11 +113,19 @@ struct instruction
 	int op;//指令类型
 	int Rd, Rs1, Rs2;//变量编号：目的，源1，源2
 	bool fRd, fRs1, fRs2;//变量类型：局部，全局
+	bool tRd, tRs1, tRs2;//变量类型：整型，浮点型
+	bool fimm;//是否有偏移量
 	type_label L1, L2;//跳转标号
-	int imm;//偏移量，用于GEP指令
+	int imm;//偏移量，用于GEP指令,store指令,运算指令
+	/*针对call语句*/
+	int tot_formal,type_ret;//形参数量，返回类型
+	type_label name;//被调函数名
+	vector<bool>formal_type;//存储形参的类型
+	vector<int>formal_num;//存储形参的编号
 	instruction* next;
 	instruction()
 	{
+		tot_formal = 0;
 		next = NULL;
 	}
 };
@@ -138,20 +146,26 @@ struct basic_block
 /*functions*/
 struct functions
 {
-	int num, cnt_ins, cnt_bb, actual_cnt, formal_cnt, arg_cnt, size;//函数编号,指令数,bb数,实参数量,形参数量,参数数量,所需的栈空间大小
+	//函数编号,指令数,bb数,实参数量,形参数量,调用的形参数量最大值,参数数量,所需的栈空间大小,返回值类型
+	int num, cnt_ins, cnt_bb, total_actual, total_formal, max_formal, tot_arg, size, type;
 	type_label name;//函数名称
-	vector<pair<type_variables, bool> >args;//参数及其类型
-	instruction* ins_head;//指令头指针
-	basic_block* bb_head;//bb头指针
-	variable_table* local, * now_var;//局部变量表
+	vector<bool>args;//参数类型
+	instruction* ins_head, * ins_tail;//指令头尾指针
+	basic_block* bb_head, * bb_tail;//bb头尾指针
+	variable_table* local_head, * local_tail;//局部变量表
 	map<type_variables, int>map_local;//变量名到编号的映射
-	functions* pre, * next;
+	map<int, int>imm_local;//变量编号到地址偏移量的映射
+	functions* next;
 	functions()
 	{
-		cnt_ins = 0, cnt_bb = 0; actual_cnt = 0; formal_cnt = 0; arg_cnt = 0; size = 0;
-		ins_head = NULL;
-		bb_head = NULL;
-		now_var = local;
+		cnt_ins = 0, cnt_bb = 0; total_actual = 0; total_formal = 0; tot_arg = 0; size = 0;
+		ins_head = new instruction;
+		ins_tail = ins_head;
+		bb_head = new basic_block;
+		bb_tail = bb_head;
+		local_head = new variable_table;
+		local_tail = local_head;
+		next = NULL;
 	}
 };
 
@@ -164,13 +178,18 @@ extern map<type_variables, int>map_global;//变量名到编号的映射
 
 extern instruction* start;//属于全局的指令
 extern map<std::string, int>ins_num;
+extern int tot_instructions;//总的指令数
 
 extern functions* func_head, * func_tail;
 extern map<type_label, int>map_function;
+extern int tot_functions;//总的函数数
 
 /*function names*/
-int floatToBinary(float num);
+unsigned int floatToBinary(float num);
 void read(int option, std::string line, functions* num, bool in_func);
 void new_global(std::string line);
 void new_global_type(variable_table* new_global, std::string word);
 void new_global_value(variable_table* new_global, std::string word);
+functions* new_function(std::string line);
+void end_function(functions* now_function);
+void get_basic_block(functions* now_function);
