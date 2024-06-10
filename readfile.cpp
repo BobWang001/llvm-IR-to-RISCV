@@ -1,23 +1,19 @@
 #include "riscv.h"
 
-extern int total_global;//´æ´¢È«¾Ö±äÁ¿µÄÊıÁ¿
+extern int total_global;//å­˜å‚¨å…¨å±€å˜é‡çš„æ•°é‡
 extern variable_table* global, * global_tail;
 
-int floatToBinary(float num)//½«¸¡µãÊı×ª»»Îª¶ÔÓ¦µÄ¶ş½øÖÆÊı
+unsigned int floatToBinary(float num)//å°†æµ®ç‚¹æ•°è½¬æ¢ä¸ºå¯¹åº”çš„äºŒè¿›åˆ¶æ•°
 {
-	// Ê¹ÓÃunionÀ´·ÃÎÊfloatµÄÎ»±íÊ¾
+	// ä½¿ç”¨unionæ¥è®¿é—®floatçš„ä½è¡¨ç¤º
 	union
 	{
 		float f;
 		unsigned int i;
 	}b;
 	b.f = num;
-	std::bitset<32> bs(b.i); // ´´½¨Ò»¸ö32Î»µÄbitset
-	int val = 0;
-	for (int i = 0; i < 31; ++i)
-		val += bs[i] * (1 << i);
-	// ´òÓ¡Êä³ö
-	return val;
+	std::bitset<32> bs(b.i); // åˆ›å»ºä¸€ä¸ª32ä½çš„bitset
+	return bs.to_ulong();
 }
 
 void new_global_type(variable_table* new_global, std::string word)
@@ -44,7 +40,7 @@ void new_global_type(variable_table* new_global, std::string word)
 			new_global->type = 1;
 		else
 		{
-			int val = atoi(ret.c_str());//¸ÃÎ¬¶ÈµÄ´óĞ¡
+			int val = atoi(ret.c_str());//è¯¥ç»´åº¦çš„å¤§å°
 			new_global->dim++;
 			new_global->size.push_back(val);
 			new_global->cnt *= val;
@@ -73,20 +69,23 @@ void new_global_value(variable_table* new_global, std::string word)
 		}
 		if (ret == "i32" || ret == "float")
 		{
-			bool find_num = 0;
+			bool find_num = 0, find_brack = 0;
 			std::string num;
-			while (word[p] < '0' || word[p] > '9')
+			while ((word[p] < '0' || word[p] > '9') && word[p] != '-')
 			{
 				if (word[p] == ']')
 				{
 					p++;
+					find_brack = 1;
 					break;
 				}
 				else if (word[p] == ' ')
 					p++;
 			}
-			find_num = 1;//ÕÒµ½Ò»¸öÖµ
-			while ((word[p] >= '0' && word[p] <= '9') || word[p] == '.')
+			if (find_brack)
+				continue;
+			find_num = 1;//æ‰¾åˆ°ä¸€ä¸ªå€¼
+			while ((word[p] >= '0' && word[p] <= '9') || word[p] == '.' || word[p]=='-')
 			{
 				num.push_back(word[p]);
 				p++;
@@ -104,9 +103,12 @@ void new_global_value(variable_table* new_global, std::string word)
 
 void new_global(std::string line)
 {
+
+	printf(";%s\n", line.c_str());
+
 	variable_table* new_global = new variable_table;
-	new_global->num = ++total_global;//¼ÇÂ¼±àºÅ
-	bool name = 0, size_type = 0, val = 0;//±ê¼ÇÊÇ·ñÒÑ¾­ÕÒµ½ÁËÈ«¾Ö±äÁ¿µÄÃû³Æ£¬´óĞ¡ÀàĞÍ£¬³õÊ¼Öµ
+	new_global->num = ++total_global;//è®°å½•ç¼–å·
+	bool name = 0, size_type = 0, val = 0;//æ ‡è®°æ˜¯å¦å·²ç»æ‰¾åˆ°äº†å…¨å±€å˜é‡çš„åç§°ï¼Œå¤§å°ç±»å‹ï¼Œåˆå§‹å€¼
 	int cnt = 0;
 	int len = line.length();
 	for (int p = 0; p < len; )
@@ -116,7 +118,7 @@ void new_global(std::string line)
 			p++;
 			continue;
 		}
-		/*»ñµÃµ¥´Ê£º³ıÁË´æÔÚÖĞÀ¨ºÅ½øĞĞÀ¨ºÅÆ¥ÅäÒÔÍâ£¬ÆäËû¾ùÎª¶Áµ½¿Õ¸ñÍ£Ö¹*/
+		/*è·å¾—å•è¯ï¼šé™¤äº†å­˜åœ¨ä¸­æ‹¬å·è¿›è¡Œæ‹¬å·åŒ¹é…ä»¥å¤–ï¼Œå…¶ä»–å‡ä¸ºè¯»åˆ°ç©ºæ ¼åœæ­¢*/
 		std::string word;
 		word.push_back(line[p]);
 		switch (line[p])
@@ -139,7 +141,10 @@ void new_global(std::string line)
 			{
 				p++;
 				while (p < len && line[p] != ' ')
+				{
 					word.push_back(line[p]);
+					p++;
+				}
 				break;
 			}
 		}
@@ -165,9 +170,9 @@ void new_global(std::string line)
 		{
 			if (word[0] != '[')
 			{
-				if (new_global->type == 0)//ÕûÊıÖ±½Ó¸³Öµ
+				if (new_global->type == 0)//æ•´æ•°ç›´æ¥èµ‹å€¼
 					new_global->val.push_back(atoi(word.c_str()));
-				else//¸¡µãÊıĞèÒª×ª»»Ò»ÏÂ
+				else//æµ®ç‚¹æ•°éœ€è¦è½¬æ¢ä¸€ä¸‹
 					new_global->val.push_back(floatToBinary(atof(word.c_str())));
 			}
 			else
@@ -178,15 +183,25 @@ void new_global(std::string line)
 	new_global->next = NULL;
 	global_tail->next = new_global;
 	global_tail = new_global;
+
+	printf(";name=%s,type=%d,dim=%d,cnt=%d\n", new_global->name.c_str(), new_global->type, new_global->dim, new_global->cnt);
+	printf(";");
+	for (auto it : new_global->size)
+		printf("%u ", it);
+	printf("\n;");
+	for (auto it : new_global->val)
+		printf("%u ", it);
+	printf("\n");
+
 }
 
-void read(int option, std::string line, functions* num, bool in_func)//¶ÁÈë
+void read(int option, std::string line, functions* num, bool in_func)//è¯»å…¥
 {
 	switch (option)
 	{
-		case 0://globalÓï¾ä
+		case 0://globalè¯­å¥
 		{
-			new_global(line);//ĞÂ½¨Ò»¸öÈ«¾Ö±äÁ¿
+			new_global(line);//æ–°å»ºä¸€ä¸ªå…¨å±€å˜é‡
 			break;
 		}
 	}
