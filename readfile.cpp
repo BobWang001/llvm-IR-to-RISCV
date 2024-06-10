@@ -3,6 +3,7 @@
 extern int total_global;//存储全局变量的数量
 extern variable_table* global, * global_tail;
 extern int tot_instructions;//总的指令数
+extern map<std::string, int>cond_num;
 
 unsigned int floatToBinary(float num)//将浮点数转换为对应的二进制数
 {
@@ -38,7 +39,7 @@ variable_table* get_new_local(functions* num_func, std::string word)
 	return new_local;
 }
 
-void new_global_type(variable_table* new_global, std::string word)
+void new_variable_type(variable_table* new_global, std::string word)
 {
 	int len = word.length();
 	for (int p = 0; p < len; )
@@ -71,7 +72,7 @@ void new_global_type(variable_table* new_global, std::string word)
 	}
 }
 
-void new_global_value(variable_table* new_global, std::string word)
+void new_variable_value(variable_table* new_global, std::string word)
 {
 	int len = word.length();
 	for (int p = 0; p < len; )
@@ -123,18 +124,18 @@ void new_global_value(variable_table* new_global, std::string word)
 	}
 }
 
-void new_global(std::string line)
+void new_variable(int op, std::string line, variable_table* tail, functions* num_func = NULL)
 {
 
 	printf(";%s\n", line.c_str());
 
-	variable_table* new_global = new variable_table;
-	new_global->num = total_global+1;//记录编号
-	bool name = 0, size_type = 0, val = 0;//标记是否已经找到了全局变量的名称，大小类型，初始值
+	variable_table* new_variable = new variable_table;
+	new_variable->num = total_global+1;//记录编号
+	bool is_ins = 0, name = 0, size_type = 0, val = 0;//标记是否已经找到了全局变量的名称，大小类型，初始值
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ')
+		if (line[p] == ' ' || line[p] == 9)
 		{
 			p++;
 			continue;
@@ -142,6 +143,7 @@ void new_global(std::string line)
 		if (line[p] == ';')
 			break;
 		/*获得单词：除了存在中括号进行括号匹配以外，其他均为读到空格停止*/
+		is_ins = 1;
 		std::string word;
 		word.push_back(line[p]);
 		switch (line[p])
@@ -173,51 +175,63 @@ void new_global(std::string line)
 				break;
 			}
 		}
-		if (word == "global")
+		if (word == "global" || word == "alloca")
 			continue;
 		if (word == "=")
 			continue;
 		if (!name)
 		{
-			new_global->name = word;
+			new_variable->name = word;
 			name = 1;
 		}
 		else if (!size_type)
 		{
 			if (word[0] != '[')
-				new_global->type = (word == "i32") ? 0 : 1;
+				new_variable->type = (word == "i32") ? 0 : 1;
 			else
-				new_global_type(new_global, word);
+				new_variable_type(new_variable, word);
 			size_type = 1;
 		}
 		else if (!val)
 		{
 			if (word[0] != '[')
 			{
-				if (new_global->type == 0)//整数直接赋值
-					new_global->val.push_back(atoi(word.c_str()));
+				if (new_variable->type == 0)//整数直接赋值
+					new_variable->val.push_back(atoi(word.c_str()));
 				else//浮点数需要转换一下
-					new_global->val.push_back(floatToBinary(atof(word.c_str())));
+					new_variable->val.push_back(floatToBinary(atof(word.c_str())));
 			}
 			else
-				new_global_value(new_global, word);
+				new_variable_value(new_variable, word);
 			val = 1;
 		}
 	}
-	total_global += new_global->cnt;
+	if (!is_ins)
+		return;
+	if (op)
+		num_func->map_local[new_variable->name] = new_variable->num;
+	else map_global[new_variable->name] = new_variable->num;
+	total_global += new_variable->cnt;
 	//用0补齐
-	while (new_global->val.size() < new_global->cnt)
-		new_global->val.push_back(0);
-	new_global->next = NULL;
-	global_tail->next = new_global;
-	global_tail = new_global;
+	while (new_variable->val.size() < new_variable->cnt)
+		new_variable->val.push_back(0);
+	new_variable->next = NULL;
+	tail->next = new_variable;
+	tail = new_variable;
+	//加入局部变量
+	if (op)
+	{
+		num_func->total_actual += new_variable->cnt;
+		num_func->local_tail->next = new_variable;
+		num_func->local_tail = new_variable;
+	}
 
-	printf(";name=%s,number=%d,type=%d,dim=%d,cnt=%d\n", new_global->name.c_str(), new_global->num, new_global->type, new_global->dim, new_global->cnt);
-	printf(";");
-	for (auto it : new_global->size)
+	printf(";name=%s,number=%d,type=%d,dim=%d,cnt=%d\n", new_variable->name.c_str(), new_variable->num, new_variable->type, new_variable->dim, new_variable->cnt);
+	printf(";size: ");
+	for (auto it : new_variable->size)
 		printf("%u ", it);
-	printf("\n;");
-	for (auto it : new_global->val)
+	printf("\n;val: ");
+	for (auto it : new_variable->val)
 		printf("%u ", it);
 	printf("\n\n");
 
@@ -228,15 +242,12 @@ void new_load(int op,std::string line,functions* num_func)
 
 	printf(";%s\n", line.c_str());
 
-	num_func->cnt_ins++;
 	instruction* new_load = new instruction;
-	new_load->num = ++tot_instructions;
-	new_load->op = op;
-	bool fRd = 0, tRd = 0, fRs = 0, tRs = 0;//标记是否已经找到了目的变量及其type，源变量及其type
+	bool is_ins = 0, fRd = 0, tRd = 0, fRs = 0, tRs = 0;//标记是否已经找到了目的变量及其type，源变量及其type
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == ',')
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
 		{
 			p++;
 			continue;
@@ -244,6 +255,7 @@ void new_load(int op,std::string line,functions* num_func)
 		if (line[p] == ';')
 			break;
 		/*获得单词：除了存在中括号进行括号匹配以外，其他均为读到空格停止*/
+		is_ins = 1;
 		std::string word;
 		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
 		{
@@ -285,6 +297,11 @@ void new_load(int op,std::string line,functions* num_func)
 			fRs = 1;
 		}
 	}
+	if (!is_ins)
+		return;
+	num_func->cnt_ins++;
+	new_load->num = ++tot_instructions;
+	new_load->op = op;
 	insert_instruction(num_func, new_load);
 
 	printf(";Rd=%d type=%d Rs=%d type=%d\n", new_load->Rd, new_load->tRd, new_load->Rs1, new_load->tRs1);
@@ -295,12 +312,85 @@ void new_load(int op,std::string line,functions* num_func)
 void new_store(int op, std::string line, functions* num_func)
 {
 
+	printf(";%s\n", line.c_str());
+
+	instruction* new_store = new instruction;
+	bool is_ins = 0, fRd = 0, tRd = 0, fRs_imm = 0, tRs_imm = 0;//标记是否已经找到了目的变量及其type，源变量及其type
+	int len = line.length();
+	for (int p = 0; p < len; )
+	{
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
+		{
+			p++;
+			continue;
+		}
+		if (line[p] == ';')
+			break;
+		/*获得单词：除了存在中括号进行括号匹配以外，其他均为读到空格停止*/
+		is_ins = 1;
+		std::string word;
+		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
+		{
+			word.push_back(line[p]);
+			p++;
+		}
+		if (word == "store")
+			continue;
+		if (!tRs_imm)
+		{
+			new_store->tRs1 = ((word == "i32") ? 0 : 1);
+			tRs_imm = 1;
+		}
+		else if (!fRs_imm)
+		{
+			if (word[0] >= '0' && word[0] <= '9' || word[0] == '-')//存在立即数
+			{
+				new_store->fimm = 1;
+				if (new_store->tRs1 == 0)
+					new_store->imm = atoi(word.c_str());
+				else
+					new_store->imm = floatToBinary(atof(word.c_str()));
+			}
+			else//非立即数
+			{
+				new_store->fimm = 0;
+				if (map_global.count(word) != 0)
+					new_store->Rs1 = map_global[word];
+				else
+					new_store->Rs1 = num_func->map_local[word];
+			}
+			fRs_imm = 1;
+		}
+		else if (!tRd)
+		{
+			new_store->tRd = ((word == "i32*") ? 0 : 1);
+			tRd = 1;
+		}
+		else if (!fRd)
+		{
+			if (map_global.count(word) != 0)
+				new_store->Rd = map_global[word];
+			else
+				new_store->Rd = num_func->map_local[word];
+			fRd = 1;
+		}
+	}
+	if (!is_ins)
+		return;
+	num_func->cnt_ins++;
+	new_store->num = ++tot_instructions;
+	new_store->op = op;
+	insert_instruction(num_func, new_store);
+
+	printf(";Rd=%d type=%d ", new_store->Rd, (new_store->tRd == 0) ? 0 : 1);
+	if (new_store->fimm)
+		printf("imm=%u ", new_store->imm);
+	else printf("Rs=%d ", new_store->Rs1);
+	printf("type=%d\n", (new_store->tRs1 == 0) ? 0 : 1);
+	printf("\n");
+
 }
 
-void new_local(int op, std::string line, functions* num_func)
-{
-
-}
 void new_GEP(int op, std::string line, functions* num_func)
 {
 
@@ -309,11 +399,217 @@ void new_GEP(int op, std::string line, functions* num_func)
 void new_operation(int op, std::string line, functions* num_func)
 {
 
+	printf(";%s\n", line.c_str());
+
+	instruction* new_operation = new instruction;
+	bool is_ins = 0, fRd = 0, fRs1_imm = 0, fRs2_imm = 0, type = 0;//标记是否已经找到了目的变量及其type，源变量(1/2)及其type
+	int len = line.length();
+	for (int p = 0; p < len; )
+	{
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
+		{
+			p++;
+			continue;
+		}
+		if (line[p] == ';')
+			break;
+		/*获得单词：除了存在中括号进行括号匹配以外，其他均为读到空格停止*/
+		is_ins = 1;
+		std::string word;
+		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
+		{
+			word.push_back(line[p]);
+			p++;
+		}
+		if (word == "=" || word == "add" || word == "sub" || word == "mul"
+			|| word == "sdiv" || word == "and" || word == "or" || word == "xor")
+			continue;
+		if (!fRd)
+		{
+			if (map_global.count(word) != 0)
+				new_operation->Rd = map_global[word];
+			else if (num_func->map_local.count(word) != 0)
+				new_operation->Rd = num_func->map_local[word];
+			else//之前没有给该变量分配空间的话就分配一个局部变量
+			{
+				++num_func->total_actual;
+				variable_table* new_local = get_new_local(num_func, word);
+				new_operation->Rd = num_func->map_local[word];
+			}
+			fRd = 1;
+		}
+		else if (!type)
+		{
+			new_operation->tRd = new_operation->tRs1 = new_operation->tRs2 = ((word == "i32") ? 0 : 1);
+			type = 1;
+		}
+		else if (!fRs1_imm)
+		{
+			if (word[0] >= '0' && word[0] <= '9' || word[0] == '-')//存在立即数
+			{
+				new_operation->fimm1 = 1;
+				if (new_operation->tRs1 == 0)
+					new_operation->imm1 = atoi(word.c_str());
+				else
+					new_operation->imm1 = floatToBinary(atof(word.c_str()));
+			}
+			else//非立即数
+			{
+				new_operation->fimm1 = 0;
+				if (map_global.count(word) != 0)
+					new_operation->Rs1 = map_global[word];
+				else
+					new_operation->Rs1 = num_func->map_local[word];
+			}
+			fRs1_imm = 1;
+		}
+		else if (!fRs2_imm)
+		{
+			if (word[0] >= '0' && word[0] <= '9' || word[0] == '-')//存在立即数
+			{
+				new_operation->fimm2 = 1;
+				if (new_operation->tRs2 == 0)
+					new_operation->imm2 = atoi(word.c_str());
+				else
+					new_operation->imm2 = floatToBinary(atof(word.c_str()));
+			}
+			else//非立即数
+			{
+				new_operation->fimm2 = 0;
+				if (map_global.count(word) != 0)
+					new_operation->Rs2 = map_global[word];
+				else
+					new_operation->Rs2 = num_func->map_local[word];
+			}
+			fRs2_imm = 1;
+		}
+	}
+	if (!is_ins)
+		return;
+	num_func->cnt_ins++;
+	new_operation->num = ++tot_instructions;
+	new_operation->op = op;
+	insert_instruction(num_func, new_operation);
+
+	printf(";Rd=%d ", new_operation->Rd);
+	if (new_operation->fimm1)
+		printf("imm1=%u ", new_operation->imm1);
+	else printf("Rs1=%d ", new_operation->Rs1);
+	if (new_operation->fimm2)
+		printf("imm2=%u ", new_operation->imm2);
+	else printf("Rs2=%d ", new_operation->Rs2);
+	printf("type=%d\n", (new_operation->tRd == 0) ? 0 : 1);
+	printf("\n");
 }
 
 void new_xcmp(int op, std::string line, functions* num_func)
 {
 
+	printf(";%s\n", line.c_str());
+
+	instruction* new_xcmp = new instruction;
+	bool is_ins = 0, fRd = 0, cond = 0, fRs1_imm = 0, fRs2_imm = 0, type = 0;//标记是否已经找到了目的变量及其type，源变量(1/2)及其type
+	int len = line.length();
+	for (int p = 0; p < len; )
+	{
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
+		{
+			p++;
+			continue;
+		}
+		if (line[p] == ';')
+			break;
+		/*获得单词：除了存在中括号进行括号匹配以外，其他均为读到空格停止*/
+		is_ins = 1;
+		std::string word;
+		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
+		{
+			word.push_back(line[p]);
+			p++;
+		}
+		if (word == "=" || word == "icmp" || word == "fcmp")
+			continue;
+		if (!fRd)
+		{
+			if (map_global.count(word) != 0)
+				new_xcmp->Rd = map_global[word];
+			else if (num_func->map_local.count(word) != 0)
+				new_xcmp->Rd = num_func->map_local[word];
+			else//之前没有给该变量分配空间的话就分配一个局部变量
+			{
+				++num_func->total_actual;
+				variable_table* new_local = get_new_local(num_func, word);
+				new_xcmp->Rd = num_func->map_local[word];
+			}
+			fRd = 1;
+		}
+		else if (!cond)
+		{
+			new_xcmp->cond = cond_num[word];
+			cond = 1;
+		}
+		else if (!type)
+		{
+			new_xcmp->tRd = new_xcmp->tRs1 = new_xcmp->tRs2 = ((word == "i32") ? 0 : 1);
+			type = 1;
+		}
+		else if (!fRs1_imm)
+		{
+			if (word[0] >= '0' && word[0] <= '9' || word[0] == '-')//存在立即数
+			{
+				new_xcmp->fimm1 = 1;
+				if (new_xcmp->tRs1 == 0)
+					new_xcmp->imm1 = atoi(word.c_str());
+				else
+					new_xcmp->imm1 = floatToBinary(atof(word.c_str()));
+			}
+			else//非立即数
+			{
+				new_xcmp->fimm1 = 0;
+				if (map_global.count(word) != 0)
+					new_xcmp->Rs1 = map_global[word];
+				else
+					new_xcmp->Rs1 = num_func->map_local[word];
+			}
+			fRs1_imm = 1;
+		}
+		else if (!fRs2_imm)
+		{
+			if ((word[0] >= '0' && word[0] <= '9') || word[0] == '-') //存在立即数
+			{
+				new_xcmp->fimm2 = 1;
+				if (new_xcmp->tRs2 == 0)
+					new_xcmp->imm2 = atoi(word.c_str());
+				else
+					new_xcmp->imm2 = floatToBinary(atof(word.c_str()));
+			}
+			else//非立即数
+			{
+				new_xcmp->fimm2 = 0;
+				if (map_global.count(word) != 0)
+					new_xcmp->Rs2 = map_global[word];
+				else
+					new_xcmp->Rs2 = num_func->map_local[word];
+			}
+			fRs2_imm = 1;
+		}
+	}
+	if (!is_ins)
+		return;
+	num_func->cnt_ins++;
+	new_xcmp->num = ++tot_instructions;
+	new_xcmp->op = op;
+	insert_instruction(num_func, new_xcmp);
+
+	printf(";Rd=%d ", new_xcmp->Rd);
+	if (new_xcmp->fimm1)
+		printf("imm1=%u ", new_xcmp->imm1);
+	else printf("Rs1=%d ", new_xcmp->Rs1);
+	if (new_xcmp->fimm2)
+		printf("imm2=%u ", new_xcmp->imm2);
+	else printf("Rs2=%d ", new_xcmp->Rs2);
+	printf("cond=%d type=%d\n", new_xcmp->cond, (new_xcmp->tRd == 0) ? 0 : 1);
+	printf("\n");
 }
 
 void new_branch(int op, std::string line, functions* num_func)
@@ -328,7 +624,7 @@ void get_instruction_args(instruction* ins, std::string line, functions* num_fun
 	bool last_type = 0;//当前参数类型
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == ',')
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
 		{
 			p++;
 			continue;
@@ -359,15 +655,12 @@ void new_call(int op, std::string line, functions* num_func)
 	
 	printf(";%s\n", line.c_str());
 
-	num_func->cnt_ins++;
 	instruction* new_call = new instruction;
-	new_call->num = ++tot_instructions;
-	new_call->op = op;
-	bool fRd = 0, tRd = 0, name = 0;//标记是否已经找到了目的变量及其type，被调函数名
+	bool is_ins = 0, fRd = 0, tRd = 0, name = 0;//标记是否已经找到了目的变量及其type，被调函数名
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == ',')
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
 		{
 			p++;
 			continue;
@@ -375,6 +668,7 @@ void new_call(int op, std::string line, functions* num_func)
 		if (line[p] == ';' || line[p] == '(')
 			break;
 		/*获得单词：除了存在中括号进行括号匹配以外，其他均为读到空格或者'('停止*/
+		is_ins = 1;
 		std::string word;
 		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',' && line[p] != '(')
 		{
@@ -430,7 +724,27 @@ void new_call(int op, std::string line, functions* num_func)
 		get_instruction_args(new_call, word, num_func);//获取参数列表
 		break;
 	}
+	if (!is_ins)
+		return;
+	if (!is_ins)
+		return;
+	num_func->cnt_ins++;
+	new_call->num = ++tot_instructions;
+	new_call->op = op;
 	insert_instruction(num_func, new_call);
+
+	printf(";type=%d arg_cnt=%d ", new_call->type_ret, new_call->tot_formal);
+	if (new_call->type_ret != 2)
+		printf("ret_num=%d\n", new_call->Rd);
+	else printf("\n");
+	int nw = 0;
+	for (auto it : new_call->formal_num)
+	{
+		printf(";number=%d type=%d\n", it, (new_call->formal_type[nw]) ? 1 : 0);
+		nw++;
+	}
+	printf("\n");
+
 }
 
 void new_ret(int op, std::string line, functions* num_func)
@@ -438,15 +752,12 @@ void new_ret(int op, std::string line, functions* num_func)
 
 	printf(";%s\n", line.c_str());
 
-	num_func->cnt_ins++;
 	instruction* new_ret = new instruction;
-	new_ret->num = ++tot_instructions;
-	new_ret->op = op;
-	bool type = 0, tRs = 0;//标记是否已经找到返回类型，源变量
+	bool is_ins = 0, type = 0, tRs = 0;//标记是否已经找到返回类型，源变量
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == ',')
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
 		{
 			p++;
 			continue;
@@ -454,6 +765,7 @@ void new_ret(int op, std::string line, functions* num_func)
 		if (line[p] == ';')
 			break;
 		/*获得单词：其他均为读到空格停止*/
+		is_ins = 1;
 		std::string word;
 		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
 		{
@@ -480,7 +792,21 @@ void new_ret(int op, std::string line, functions* num_func)
 			tRs = 1;
 		}
 	}
+	if (!is_ins)
+		return;
+	if (!is_ins)
+		return;
+	num_func->cnt_ins++;
+	new_ret->num = ++tot_instructions;
+	new_ret->op = op;
 	insert_instruction(num_func, new_ret);
+
+	printf(";type=%d ", new_ret->type_ret);
+	if (new_ret->type_ret != 2)
+		printf("number=%d\n", new_ret->Rs1);
+	else printf("\n");
+	printf("\n");
+
 }
 
 void get_args(functions* new_function, std::string line)
@@ -577,7 +903,7 @@ functions* new_function(std::string line)
 	func_tail = new_function;
 
 	printf(";name=%s number=%d formal=%d\n", new_function->name.c_str(), new_function->num, new_function->total_formal);
-	printf(";");
+	printf(";type: ");
 	for (auto it : new_function->args)
 	{
 		if (it)
@@ -622,7 +948,7 @@ void read(int option, std::string line, functions* num_func, bool in_func)//读�
 	{
 		case 0://global语句
 		{
-			new_global(line);//新建一个全局变量
+			new_variable(0, line, global_tail);//新建一个全局变量
 			break;
 		}
 		case 1://load语句
@@ -637,7 +963,7 @@ void read(int option, std::string line, functions* num_func, bool in_func)//读�
 		}
 		case 3://alloca语句
 		{
-			new_local( 3, line, num_func);
+			new_variable(1, line, num_func->local_tail, num_func);
 			break;
 		}
 		case 4://GEP语句
