@@ -3,10 +3,10 @@
 extern Register reg[num_registers];
 
 extern variable_table* global, * global_tail;
-extern int total_global;//´æ´¢È«¾Ö±äÁ¿µÄÊıÁ¿
-extern map<type_variables, int>map_global;//±äÁ¿Ãûµ½±àºÅµÄÓ³Éä
+extern int total_global;//å­˜å‚¨å…¨å±€å˜é‡çš„æ•°é‡
+extern map<type_variables, int>map_global;//å˜é‡ååˆ°ç¼–å·çš„æ˜ å°„
 
-extern instruction* start;//ÊôÓÚÈ«¾ÖµÄÖ¸Áî
+extern instruction* start;//å±äºå…¨å±€çš„æŒ‡ä»¤
 extern map<std::string, int>ins_num;
 
 extern functions* func_head, * func_tail;
