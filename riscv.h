@@ -114,10 +114,13 @@ struct instruction
 	int Rd, Rs1, Rs2;//变量编号：目的，源1，源2
 	bool fRd, fRs1, fRs2;//变量类型：局部，全局
 	bool tRd, tRs1, tRs2;//变量类型：整型，浮点型
-	bool fimm;//是否有偏移量
+	bool fimm, fimm1, fimm2;//是否有偏移量
+	unsigned int imm, imm1, imm2;//偏移量，用于GEP指令,store指令,运算指令
+	/*针对xcmp语句*/
+	int cond;
+	/*针对br语句*/
 	type_label L1, L2;//跳转标号
-	int imm;//偏移量，用于GEP指令,store指令,运算指令
-	/*针对call语句*/
+	/*针对call,ret语句*/
 	int tot_formal,type_ret;//形参数量，返回类型
 	type_label name;//被调函数名
 	vector<bool>formal_type;//存储形参的类型
@@ -177,7 +180,7 @@ extern int total_global;//存储全局变量的数量
 extern map<type_variables, int>map_global;//变量名到编号的映射
 
 extern instruction* start;//属于全局的指令
-extern map<std::string, int>ins_num;
+extern map<std::string, int>ins_num, cond_num;
 extern int tot_instructions;//总的指令数
 
 extern functions* func_head, * func_tail;
@@ -187,9 +190,9 @@ extern int tot_functions;//总的函数数
 /*function names*/
 unsigned int floatToBinary(float num);
 void read(int option, std::string line, functions* num, bool in_func);
-void new_global(std::string line);
-void new_global_type(variable_table* new_global, std::string word);
-void new_global_value(variable_table* new_global, std::string word);
+void new_variable(std::string line, variable_table* tail);
+void new_variable_type(variable_table* new_global, std::string word);
+void new_variable_value(variable_table* new_global, std::string word);
 functions* new_function(std::string line);
 void end_function(functions* now_function);
 void get_basic_block(functions* now_function);
