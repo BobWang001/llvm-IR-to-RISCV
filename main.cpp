@@ -5,7 +5,7 @@ int total_global;//存储全局变量的数量
 map<type_variables, int>map_global;//变量名到编号的映射
 
 instruction* start = new instruction;//属于全局的指令
-map<std::string, int>ins_num;
+map<std::string, int>ins_num, cond_num;
 int tot_instructions;//总的指令数
 
 functions* func_head = new functions, * func_tail = new functions;
@@ -21,6 +21,11 @@ void init_definition()//初始化定义
 	{"global",0},{"load",1},{"store",2},{"alloca",3},{"getelementptr",4},
 	{"add",5},{"sub",6},{"mul",7},{"sdiv",8},{"and",9},{"or",10},{"xor",11},
 	{"icmp",12}, {"fcmp",13},{"br",14},{"define",15},{"call",16},{"ret",17}
+	};
+	cond_num = {
+	{"eq",0},{"ne",1},{"ugt",2},{"sgt",3},{"ule",4},
+	{"sle",5},{"uge",6},{"sge",7},{"ult",8},{"slt",9},
+	{"oeq",10},{"ogt",11},{"oge",12}, {"olt",13},{"ole",14},{"une",15}
 	};
 	//初始化函数头尾指针
 	func_tail = func_head;
@@ -63,17 +68,17 @@ int main()
 	std::ifstream file_2("test_f.ll");
 	while (getline(file_2, line))//逐行读入
 	{
-		if (line[0] == ';')
-			continue;
-		if (line == "}")//到达函数定义的末尾
-		{
-			end_function(now_func);//计算函数所需的空间大小
-			get_basic_block(now_func);//找出basic blocks
-			in_func = 0;
-		}
 		std::istringstream word(line);
 		while (word >> s)
 		{
+			if (s[0] == ';')
+				break;
+			if (s[0] == '}')//到达函数定义的末尾
+			{
+				end_function(now_func);//计算函数所需的空间大小
+				get_basic_block(now_func);//找出basic blocks
+				in_func = 0;
+			}
 			int option = -1;//操作，没有识别出指令视为-1
 			if (ins_num.count(s) == 0)
 				continue;
