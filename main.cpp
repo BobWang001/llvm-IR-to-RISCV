@@ -1,16 +1,16 @@
 #include "riscv.h"
 
-variable_table* global, * global_tail;
-int total_global;//´æ´¢È«¾Ö±äÁ¿µÄÊıÁ¿
-map<type_variables, int>map_global;//±äÁ¿Ãûµ½±àºÅµÄÓ³Éä
+variable_table* global = new variable_table, * global_tail;
+int total_global;//å­˜å‚¨å…¨å±€å˜é‡çš„æ•°é‡
+map<type_variables, int>map_global;//å˜é‡ååˆ°ç¼–å·çš„æ˜ å°„
 
-instruction* start;//ÊôÓÚÈ«¾ÖµÄÖ¸Áî
+instruction* start = new instruction;//å±äºå…¨å±€çš„æŒ‡ä»¤
 map<std::string, int>ins_num;
 
-functions* func_head, * func_tail;
+functions* func_head = new functions, * func_tail = new functions;
 map<type_label, int>map_function;
 
-void init_definition()//³õÊ¼»¯¶¨Òå
+void init_definition()//åˆå§‹åŒ–å®šä¹‰
 {
 	total_global = 0;
 	ins_num = {
@@ -18,30 +18,32 @@ void init_definition()//³õÊ¼»¯¶¨Òå
 	{"add",5},{"sub",6},{"mul",7},{"sdiv",8},{"and",9},{"or",10},{"xor",11},
 	{"icmp",12}, {"fcmp",13},{"br",14},{"define",15},{"call",16},{"ret",17}
 	};
-	//³õÊ¼»¯º¯ÊıÍ·Î²Ö¸Õë
+	//åˆå§‹åŒ–å‡½æ•°å¤´å°¾æŒ‡é’ˆ
 	func_head->pre = NULL; func_head->next = func_tail;
 	func_tail->pre = func_head; func_tail->next = NULL;
+	//åˆå§‹åŒ–å…¨å±€å˜é‡å°¾æŒ‡é’ˆ
+	global_tail = global;
 }
 
 int main()
 {
 	init_definition();
-	std::ifstream file("test.ll");//´ò¿ªÎÄ¼ş
+	std::ifstream file("test.ll");//æ‰“å¼€æ–‡ä»¶
 	if (!file.is_open())
 	{
-		std::cerr << "ÎŞ·¨´ò¿ªÎÄ¼ş" << std::endl;
+		std::cerr << "æ— æ³•æ‰“å¼€æ–‡ä»¶" << std::endl;
 		return 1;
 	}
 	std::string line;
 	std::string s;
-	functions* lst_func = func_head, * now_func = NULL;//Ö¸ÏòÉÏÒ»¸öº¯Êı£¬Ö¸Ïòµ±Ç°º¯Êı
-	bool in_func = 0;//ÊÇ·ñÔÚº¯ÊıÄÚ²¿£¬³õÊ¼»¯Îª·ñ
-	while(getline(file,line))//ÖğĞĞ¶ÁÈë
+	functions* lst_func = func_head, * now_func = NULL;//æŒ‡å‘ä¸Šä¸€ä¸ªå‡½æ•°ï¼ŒæŒ‡å‘å½“å‰å‡½æ•°
+	bool in_func = 0;//æ˜¯å¦åœ¨å‡½æ•°å†…éƒ¨ï¼Œåˆå§‹åŒ–ä¸ºå¦
+	while(getline(file,line))//é€è¡Œè¯»å…¥
 	{
 		std::istringstream word(line);
 		while (word >> s)
 		{
-			int option = -1;//²Ù×÷£¬Ã»ÓĞÊ¶±ğ³öÖ¸ÁîÊÓÎª-1
+			int option = -1;//æ“ä½œï¼Œæ²¡æœ‰è¯†åˆ«å‡ºæŒ‡ä»¤è§†ä¸º-1
 			if (ins_num.count(s) == 0)
 				continue;
 			else option = ins_num[s];
