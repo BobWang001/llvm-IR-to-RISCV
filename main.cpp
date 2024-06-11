@@ -22,8 +22,9 @@ void init_definition()//初始化定义
 {
 	ins_num = {
 	{"global",0},{"load",1},{"store",2},{"alloca",3},{"getelementptr",4},
-	{"add",5},{"sub",6},{"mul",7},{"sdiv",8},{"and",9},{"or",10},{"xor",11},
-	{"icmp",12}, {"fcmp",13},{"br",14},{"define",15},{"call",16},{"ret",17},{"label",18}
+	{"add",5},{"fadd",6},{"sub",7},{"fsub",8},{"mul",9},{"fmul",10},{"sdiv",11},{"fdiv",12},
+	{"srem",13},{"frem",14},{"fneg",15},{"icmp",16}, {"fcmp",17},{"br",18},{"define",19},
+	{"call",20},{"ret",21},{"label",22},{"unreachable",23},{"sitofp",24},{"fptosi",25}
 	};
 	cond_num = {
 	{"eq",0},{"ne",1},{"ugt",2},{"sgt",3},{"ule",4},
@@ -91,14 +92,14 @@ int main()
 			if (check_label(s))//单独处理label
 			{
 				type_label ret = get_label(s);
-				new_label(18, ret, now_func);
+				new_label(ins_num["label"], ret, now_func);
 				line = get_new_line(line);
 			}
 			int option = -1;//操作，没有识别出指令视为-1
 			if (ins_num.count(s) == 0)
 				continue;
 			else option = ins_num[s];
-			if (option == 15)//单独处理函数定义语句
+			if (option == ins_num["define"])//单独处理函数定义语句
 			{
 				functions* ret = new_function(line);
 				lst_func->next = ret;
