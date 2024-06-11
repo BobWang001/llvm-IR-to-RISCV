@@ -172,8 +172,8 @@
 ;  %7 = icmp sle i32 %6, 10
 ;Rd=32 Rs1=31 imm2=10 cond=5 type=0
 
-;  br i1 %7, label %8
-;contion=1 i1=32 label1=2 label2=-842150451
+;  br i1 %7, label %8, label %17
+;contion=1 i1=32 label1=2 label2=4
 
 ;%8:
 ;num=2
