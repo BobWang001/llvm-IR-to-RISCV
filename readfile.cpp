@@ -39,26 +39,12 @@ Register_virtual* get_new_register(type_label name, functions* num_func)
 	return new_regiser;
 }
 
-/*新申请一个局部变量*/
-variable_table* get_new_local(functions* num_func, std::string word)
-{
-	variable_table* new_local = new variable_table;
-	new_local->num = ++total_global;
-	num_func->map_local[word] = total_global;
-	new_local->name = word;
-	new_local->cnt = 1;
-	new_local->dim = 1;
-	num_func->local_tail->next = new_local;
-	num_func->local_tail = new_local;
-	return new_local;
-}
-
 void new_variable_type(variable_table* new_global, std::string word)
 {
 	int len = word.length();
 	for (int p = 0; p < len; )
 	{
-		if (word[p] == '[' || word[p] == ']' || word[p]=='x' || word[p] == ' ')
+		if (word[p] == '[' || word[p] == ']' || word[p] == 'x' || word[p] == ' ' || word[p] == ',')
 		{
 			p++;
 			continue;
@@ -91,7 +77,7 @@ void new_variable_value(variable_table* new_global, std::string word)
 	int len = word.length();
 	for (int p = 0; p < len; )
 	{
-		if (word[p] == '[' || word[p] == ']' || word[p] == 'x' || word[p] == ' ')
+		if (word[p] == '[' || word[p] == ']' || word[p] == 'x' || word[p] == ' ' || word[p] == ',')
 		{
 			p++;
 			continue;
@@ -151,7 +137,7 @@ void new_variable(int op, std::string line, variable_table* tail, functions* num
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == 9)
+		if (line[p] == ' ' || line[p] == 9 || line[p] == ',')
 		{
 			p++;
 			continue;
@@ -183,7 +169,7 @@ void new_variable(int op, std::string line, variable_table* tail, functions* num
 			default:
 			{
 				p++;
-				while (p < len && line[p] != ' ' && line[p] != ';')
+				while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
 				{
 					word.push_back(line[p]);
 					p++;
@@ -361,7 +347,7 @@ void get_register_imm(instruction* new_load, std::string line, functions* num_fu
 		if (!fRs)
 		{
 			if (map_global_register.count(word) != 0)
-				new_load->Rs1 = map_global[word];
+				new_load->Rs1 = map_global_register[word];
 			else
 				new_load->Rs1 = num_func->map_local_register[word];
 			size = get_size(word, num_func);
@@ -1294,7 +1280,7 @@ void new_label(int op, type_label label, functions* num_func)
 	new_label->L1 = label_num[label];
 	insert_instruction(num_func, new_label);
 
-	printf(";num=%d\n", new_label->L1);
+	printf(";num=%d\n\n", new_label->L1);
 
 }
 
