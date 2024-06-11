@@ -1,6 +1,8 @@
 #include "riscv.h"
 
-extern Register reg[num_registers];
+extern Register_physical reg[num_registers];
+extern map<type_label, int>map_global_register;//全局寄存器名到编号的映射
+extern int total_register;
 
 extern variable_table* global, * global_tail;
 extern int total_global;//存储全局变量的数量
