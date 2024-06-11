@@ -83,10 +83,18 @@
 using namespace std;
 
 /*register*/
-struct Register
+struct Register_physical//物理寄存器
 {
 	bool uesd,modified;//有效位,修改位
-	type_variables name;//对应变量名
+	int num;//对应虚拟寄存器编号
+};
+
+struct Register_virtual//虚拟寄存器
+{
+	type_label name;//名称
+	int num,reg_phisical;//编号,分配到的物理寄存器编号
+	bool uesd,type;//有效位,类型
+	Register_virtual* next;
 };
 
 /*符号表*/
@@ -129,6 +137,7 @@ struct instruction
 	instruction* next;
 	instruction()
 	{
+		fimm = fimm1 = fimm2 = 0;
 		branch_flag = 0;
 		tot_formal = 0;
 		next = NULL;
@@ -160,6 +169,8 @@ struct functions
 	variable_table* local_head, * local_tail;//局部变量表
 	map<type_variables, int>map_local;//变量名到编号的映射
 	map<int, int>imm_local;//变量编号到地址偏移量的映射
+	Register_virtual* reg_head, * reg_tail;//虚拟寄存器
+	map<type_label, int>map_local_register;//虚拟寄存器名到编号的映射
 	functions* next;
 	functions()
 	{
@@ -170,12 +181,16 @@ struct functions
 		bb_tail = bb_head;
 		local_head = new variable_table;
 		local_tail = local_head;
+		reg_head = new Register_virtual;
+		reg_tail = reg_head;
 		next = NULL;
 	}
 };
 
 /*definitions*/
-extern Register reg[num_registers];
+extern Register_physical reg[num_registers];
+extern map<type_label, int>map_global_register;//全局寄存器名到编号的映射
+extern int total_register;
 
 extern variable_table* global, * global_tail;
 extern int total_global;//存储全局变量的数量
@@ -195,9 +210,10 @@ extern int tot_functions;//总的函数数
 /*function names*/
 unsigned int floatToBinary(float num);
 void read(int option, std::string line, functions* num, bool in_func);
-void new_variable(std::string line, variable_table* tail);
-void new_variable_type(variable_table* new_global, std::string word);
-void new_variable_value(variable_table* new_global, std::string word);
 functions* new_function(std::string line);
 void end_function(functions* now_function);
 void get_basic_block(functions* now_function);
+int check_label(std::string s);
+std::string get_label(std::string s);
+void new_label(int op, type_label label, functions* num_func);
+std::string get_new_line(std::string line);
