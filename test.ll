@@ -1,55 +1,109 @@
-@a = global i32 5
-;@a = global i32 5
-@b = global float -5.32;get a new variable
-@c = global [2 x [3 x i32]] [[3 x i32][i32 11,i32 -221,i32 312],[3 x i32][i32 -1,i32 -20,i32 35]]
-@d = global [3 x [2 x float]] [[2 x float][float 1.0,float 2.21],[2 x float][float -3.21,float 4],[2 x float][float 10,float -123.456]]
-@e = global [8 x i32];hello from the other side
+@b = global float -114.514
+@a = global [5 x [3 x [2 x i32]]] 
 
-define i32 @add(i32 %a, i32 %b)
-{
-	%1 = alloca i32
-	%2 = alloca i32
-	%3 = add i32 40,114514
-	%3 = xor i32 1,%3
-	%4 = alloca float 1.234
-	%5 = alloca float -22.452
-	%6 = alloca float
-	%6 = sdiv float %4,%5
-	%6 = mul float %5,%6
-	%6 = sub float %6,%6
-	%6 = sdiv float %6,191.9810
-	ret i32 %a
+; Function Attrs: noinline nounwind optnone uwtable
+define i32 @add(i32 %0, i32 %1) {
+  %3 = alloca i32
+  %4 = alloca i32
+  %5 = alloca i32
+  store i32 %0, i32* %3
+  store i32 %1, i32* %4
+  %6 = load i32, i32* %3
+  %7 = load i32, i32* %4
+  %8 = add i32 %6, %7
+  store i32 %8, i32* %5
+  %9 = load i32, i32* %5
+  %10 = load i32, i32* %4
+  %11 = sub i32 %9, %10
+  store i32 %11, i32* %5
+  %12 = load i32, i32* %5
+  %13 = load i32, i32* %4
+  %14 = add i32 %12, %13
+  store i32 %14, i32* %5
+  %15 = load i32, i32* %5
+  ret i32 %15 
 }
 
-define float @max(float %a, float %b,float %c)
-{
-	%1 = alloca i32
-	%2 = alloca i32
-	%1 = load i32,i32* @a
-	store i32 %1,i32* %2
-	store i32 10,i32* %1
+; Function Attrs: noinline nounwind optnone uwtable
+define float @mul(float %0, float %1) {
+  %3 = alloca float
+  %4 = alloca float
+  %5 = alloca float
+  store float %0, float* %3
+  store float %1, float* %4
+  %6 = load float, float* %3
+  %7 = load float, float* %4
+  %8 = mul float %6, %7
+  store float %8, float* %5
+  %9 = load float, float* %5
+  ret float %9
 }
 
-define i32 @fibonacci(i32 %a, i32 %b, i32 %c )
-{
-	%c = call i32 @add(i32 %a ,i32 %b)
-	%1 = alloca i32 23
-	%2 = alloca i32 114514
-	%3 = icmp eq i32 40,114514
-	%3 = icmp ult i32 %1,233
-	%3 = icmp sgt i32 %2,%1
+; Function Attrs: noinline nounwind optnone uwtable
+define void @fibonacci() {
+  %1 = alloca i32
+  %2 = alloca i32
+  %3 = alloca i32
+  %4 = alloca i32
+  store i32 1, i32* %1
+  store i32 1, i32* %2
+  store i32 1, i32* %4
+  br label %5
 
-	%4 = alloca float 1.234
-	%5 = alloca float -22.452
-	%6 = alloca float
-	%6 = fcmp oeq float %4,%5
-	%6 = fcmp ole float %4,-11.23
-	%6 = fcmp une float 114.514,%5
+5:                                                ; preds = %14, %0
+  %6 = load i32, i32* %4
+  %7 = icmp sle i32 %6, 10
+  br i1 %7, label %8
+
+8:                                                ; preds = %5
+  %9 = load i32, i32* %1
+  store i32 %9, i32* %3
+  %10 = load i32, i32* %1
+  %11 = load i32, i32* %2
+  %12 = add i32 %10, %11
+  store i32 %12, i32* %1
+  %13 = load i32, i32* %3
+  store i32 %13, i32* %2
+  br label %14
+
+14:                                               ; preds = %8
+  %15 = load i32, i32* %4
+  %16 = add i32 %15, 1
+  store i32 %16, i32* %4
+  br label %5
+
+17:                                               ; preds = %5
+  ret void
 }
 
-define void @imsb(i32 %a,float %b)
-{
-	%1 = alloca [3 x [2 x float]]
-	%b = i32 load i32* %1
-	ret void
+; Function Attrs: noinline nounwind optnone uwtable
+define i32 @main() {
+  %1 = alloca i32
+  %2 = alloca i32
+  %3 = alloca i32
+  %4 = alloca [3 x [2 x float]]
+  store i32 0, i32* %1
+  store i32 -101, i32* %3
+  %5 = load i32, i32* getelementptr ([5 x [3 x [2 x i32]]], [5 x [3 x [2 x i32]]]* @a, i32 0, i32 1, i32 2, i32 1)
+  %6 = icmp eq i32 %5, 1
+  br i1 %6, label %7, label %11
+
+7:                                                ; preds = %0
+  %8 = load i32, i32* getelementptr ([5 x [3 x [2 x i32]]], [5 x [3 x [2 x i32]]]* @a, i32 0, i32 1, i32 2, i32 0)
+  %9 = load i32, i32* getelementptr ([5 x [3 x [2 x i32]]], [5 x [3 x [2 x i32]]]* @a, i32 0, i32 2, i32 1, i32 0)
+  %10 = call i32 @add(i32 %8, i32 %9)
+  store i32 %10, i32* %2
+  br label %15
+
+11:                                               ; preds = %0
+  %12 = load i32, i32* getelementptr ([5 x [3 x [2 x i32]]], [5 x [3 x [2 x i32]]]* @a, i32 0, i32 0, i32 2, i32 0)
+  %13 = load i32, i32* %3
+  %14 = call i32 @add(i32 %12, i32 %13)
+  store i32 %14, i32* %2
+  br label %15
+
+15:                                               ; preds = %11, %7
+  call void @fibonacci()
+  %16 = load i32, i32* %1
+  ret i32 %16
 }
