@@ -646,6 +646,8 @@ void new_operation(int op, std::string line, functions* num_func)
 	Register_virtual* new_register = new Register_virtual;
 	bool is_ins = 0, fRd = 0, fRs1_imm = 0, fRs2_imm = 0, type = 0;//标记是否已经找到了目的变量及其type，源变量(1/2)及其type
 	int len = line.length();
+	if (op == 15)
+		fRs2_imm = 1;
 	for (int p = 0; p < len; )
 	{
 		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
@@ -663,8 +665,9 @@ void new_operation(int op, std::string line, functions* num_func)
 			word.push_back(line[p]);
 			p++;
 		}
-		if (word == "=" || word == "add" || word == "sub" || word == "mul"
-			|| word == "sdiv" || word == "and" || word == "or" || word == "xor")
+		if (word == "=" || word == "add" || word == "fadd" || word == "sub" || word == "fsub" 
+			|| word == "mul" || word == "fmul" || word == "sdiv" || word == "fdiv"
+			|| word == "srem" || word == "frem" || word == "fneg")
 			continue;
 		if (!fRd)
 		{
@@ -1299,6 +1302,96 @@ std::string get_new_line(std::string line)
 	return ret;
 }
 
+void new_unreachable(int op,std::string line, functions* num_func)
+{
+
+	printf(";%s:\n", line.c_str());
+
+	instruction* new_unreachable = new instruction;
+	new_unreachable->op = op;
+	insert_instruction(num_func, new_unreachable);
+}
+
+void new_xtoy(int op,std::string line, functions* num_func)
+{
+
+	printf(";%s\n", line.c_str());
+
+	instruction* new_xtoy = new instruction;
+	Register_virtual* new_register = new Register_virtual;
+	bool is_ins = 0, fRd = 0, tRd = 0, fRs_imm = 0, tRs_imm = 0;//标记是否已经找到了目的变量及其type，源变量及其type
+	int len = line.length();
+	for (int p = 0; p < len; )
+	{
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
+		{
+			p++;
+			continue;
+		}
+		if (line[p] == ';')
+			break;
+		/*获得单词：除了存在中括号进行括号匹配以外，其他均为读到空格停止*/
+		is_ins = 1;
+		std::string word;
+		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
+		{
+			word.push_back(line[p]);
+			p++;
+		}
+		if (word == "=" || word == "fptosi" || word == "sitofp" || word == "to")
+			continue;
+		if (!fRd)
+		{
+			new_register = get_new_register(word, num_func);
+			new_xtoy->Rd = new_register->num;
+			fRd = 1;
+		}
+		else if (!tRs_imm)
+		{
+			new_xtoy->tRs1 = ((word == "i32") ? 0 : 1);
+			tRs_imm = 1;
+		}
+		else if (!fRs_imm)
+		{
+			if (word[0] >= '0' && word[0] <= '9' || word[0] == '-')//存在立即数
+			{
+				new_xtoy->fimm1 = 1;
+				if (new_xtoy->tRs1 == 0)
+					new_xtoy->imm1 = atoi(word.c_str());
+				else
+					new_xtoy->imm1 = floatToBinary(atof(word.c_str()));
+			}
+			else//非立即数
+			{
+				new_xtoy->fimm1 = 0;
+				if (map_global_register.count(word) != 0)
+					new_xtoy->Rs1 = map_global_register[word];
+				else
+					new_xtoy->Rs1 = num_func->map_local_register[word];
+			}
+			fRs_imm = 1;
+		}
+		else if (!tRd)
+		{
+			new_xtoy->tRd = ((word == "i32") ? 0 : 1);
+			tRd = 1;
+		}
+	}
+	if (!is_ins)
+		return;
+	num_func->cnt_ins++;
+	new_xtoy->num = ++tot_instructions;
+	new_xtoy->op = op;
+	insert_instruction(num_func, new_xtoy);
+
+	printf(";Rd=%d type_Rd=%d ", new_xtoy->Rd, (new_xtoy->tRd == 0) ? 0 : 1);
+	if (new_xtoy->fimm1)
+		printf("imm=%u ", new_xtoy->imm1);
+	else printf("Rs=%d ", new_xtoy->Rs1);
+	printf("type_Rs=%d\n", (new_xtoy->tRs1 == 0) ? 0 : 1);
+	printf("\n");
+}
+
 void read(int option, std::string line, functions* num_func, bool in_func)//读入
 {
 	switch (option)
@@ -1310,12 +1403,12 @@ void read(int option, std::string line, functions* num_func, bool in_func)//读�
 		}
 		case 1://load语句
 		{
-			new_load( 1, line, num_func);
+			new_load(option, line, num_func);
 			break;
 		}
 		case 2://store语句
 		{
-			new_store( 2, line, num_func);
+			new_store(option, line, num_func);
 			break;
 		}
 		case 3://alloca语句
@@ -1325,67 +1418,111 @@ void read(int option, std::string line, functions* num_func, bool in_func)//读�
 		}
 		case 4://GEP语句
 		{
-			new_GEP( 4, line, num_func);
+			new_GEP(option, line, num_func);
 			break;
 		}
 		case 5://add语句
 		{
-			new_operation(5, line, num_func);
+			new_operation(option, line, num_func);
 			break;
 		}
-		case 6://sub语句
+		case 6://fadd语句
 		{
-			new_operation(6, line, num_func);
+			new_operation(option, line, num_func);
 			break;
 		}
-		case 7://mul语句
+		case 7://sub语句
 		{
-			new_operation(7, line, num_func);
+			new_operation(option, line, num_func);
 			break;
 		}
-		case 8://sdiv语句
+		case 8://fsub语句
 		{
-			new_operation(8, line, num_func);
+			new_operation(option, line, num_func);
 			break;
 		}
-		case 9://and语句
+		case 9://mul语句
 		{
-			new_operation(9, line, num_func);
+			new_operation(option, line, num_func);
 			break;
 		}
-		case 10://or语句
+		case 10://fmul语句
 		{
-			new_operation(10, line, num_func);
+			new_operation(option, line, num_func);
 			break;
 		}
-		case 11://xor语句
+		case 11://sdiv语句
 		{
-			new_operation(11, line, num_func);
+			new_operation(option, line, num_func);
 			break;
 		}
-		case 12://icmp语句
+		case 12://fdiv语句
 		{
-			new_xcmp(12, line, num_func);
+			new_operation(option, line, num_func);
+			break;
+		
+		}
+		case 13://srem语句
+		{
+			new_operation(option, line, num_func);
 			break;
 		}
-		case 13://fcmp语句
+		case 14://frem语句
 		{
-			new_xcmp(13, line, num_func);
+			new_operation(option, line, num_func);
 			break;
 		}
-		case 14://br语句
+		case 15://fneg语句
 		{
-			new_branch( 14, line, num_func);
+			new_operation(option, line, num_func);
 			break;
 		}
-		case 16://call语句
+		case 16://icmp语句
 		{
-			new_call( 16, line, num_func);
+			new_xcmp(option, line, num_func);
 			break;
 		}
-		case 17://ret语句
+		case 17://fcmp语句
 		{
-			new_ret( 17, line, num_func);
+			new_xcmp(option, line, num_func);
+			break;
+		}
+		case 18://br语句
+		{
+			new_branch(option, line, num_func);
+			break;
+		}
+		case 19:
+		{
+			break;
+		}
+		case 20://call语句
+		{
+			new_call(option, line, num_func);
+			break;
+		}
+		case 21://ret语句
+		{
+			new_ret(option, line, num_func);
+			break;
+		}
+		case 22:
+		{
+			break;
+		}
+		case 23://unreachable语句
+		{
+			new_unreachable(option, line, num_func);
+			break;
+		}
+		case 24://sitofp语句
+		{
+			new_xtoy(option, line, num_func);
+			break;
+		}
+		case 25://fptosi语句
+		{
+			new_xtoy(option, line, num_func);
 			break;
 		}
 	}
