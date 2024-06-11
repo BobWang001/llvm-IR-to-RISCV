@@ -1,0 +1,324 @@
+;@b = global float -114.514
+;name=@b,number=1,type=1,dim=0,cnt=1
+;size:
+;val: 3269789483
+
+;@a = global [5 x [3 x [2 x i32]]]
+;name=@a,number=2,type=0,dim=3,cnt=30
+;size: 5 3 2
+;val: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+
+;define i32 @add(i32 %0, i32 %1) {
+;name=@add number=1 formal=2
+;type: 0 0
+
+;  %3 = alloca i32
+;name=%3,number=32,type=0,dim=0,cnt=1
+;size:
+;val: 0
+
+;  %4 = alloca i32
+;name=%4,number=33,type=0,dim=0,cnt=1
+;size:
+;val: 0
+
+;  %5 = alloca i32
+;name=%5,number=34,type=0,dim=0,cnt=1
+;size:
+;val: 0
+
+;  store i32 %0, i32* %3
+;Rd=5 type=0 Rs=3 type=0
+
+;  store i32 %1, i32* %4
+;Rd=6 type=0 Rs=4 type=0
+
+;  %6 = load i32, i32* %3
+;Rd=8 type=0 Rs=5 type=0
+
+;  %7 = load i32, i32* %4
+;Rd=9 type=0 Rs=6 type=0
+
+;  %8 = add i32 %6, %7
+;Rd=10 Rs1=8 Rs2=9 type=0
+
+;  store i32 %8, i32* %5
+;Rd=7 type=0 Rs=10 type=0
+
+;  %9 = load i32, i32* %5
+;Rd=11 type=0 Rs=7 type=0
+
+;  %10 = load i32, i32* %4
+;Rd=12 type=0 Rs=6 type=0
+
+;  %11 = sub i32 %9, %10
+;Rd=13 Rs1=11 Rs2=12 type=0
+
+;  store i32 %11, i32* %5
+;Rd=7 type=0 Rs=13 type=0
+
+;  %12 = load i32, i32* %5
+;Rd=14 type=0 Rs=7 type=0
+
+;  %13 = load i32, i32* %4
+;Rd=15 type=0 Rs=6 type=0
+
+;  %14 = add i32 %12, %13
+;Rd=16 Rs1=14 Rs2=15 type=0
+
+;  store i32 %14, i32* %5
+;Rd=7 type=0 Rs=16 type=0
+
+;  %15 = load i32, i32* %5
+;Rd=17 type=0 Rs=7 type=0
+
+;  ret i32 %15
+;type=0 number=17
+
+;size=40 formal_num=2 max_num=0
+;name=%3 imm=-20
+;name=%4 imm=-24
+;name=%5 imm=-28
+
+;define float @mul(float %0, float %1) {
+;name=@mul number=2 formal=2
+;type: 1 1
+
+;  %3 = alloca float
+;name=%3,number=35,type=1,dim=0,cnt=1
+;size:
+;val: 0
+
+;  %4 = alloca float
+;name=%4,number=36,type=1,dim=0,cnt=1
+;size:
+;val: 0
+
+;  %5 = alloca float
+;name=%5,number=37,type=1,dim=0,cnt=1
+;size:
+;val: 0
+
+;  store float %0, float* %3
+;Rd=20 type=1 Rs=18 type=1
+
+;  store float %1, float* %4
+;Rd=21 type=1 Rs=19 type=1
+
+;  %6 = load float, float* %3
+;Rd=23 type=1 Rs=20 type=1
+
+;  %7 = load float, float* %4
+;Rd=24 type=1 Rs=21 type=1
+
+;  %8 = mul float %6, %7
+;Rd=25 Rs1=23 Rs2=24 type=1
+
+;  store float %8, float* %5
+;Rd=22 type=1 Rs=25 type=1
+
+;  %9 = load float, float* %5
+;Rd=26 type=1 Rs=22 type=1
+
+;  ret float %9
+;type=1 number=26
+
+;size=40 formal_num=2 max_num=0
+;name=%3 imm=-20
+;name=%4 imm=-24
+;name=%5 imm=-28
+
+;define void @fibonacci() {
+;name=@fibonacci number=3 formal=0
+;type:
+
+;  %1 = alloca i32
+;name=%1,number=38,type=0,dim=0,cnt=1
+;size:
+;val: 0
+
+;  %2 = alloca i32
+;name=%2,number=39,type=0,dim=0,cnt=1
+;size:
+;val: 0
+
+;  %3 = alloca i32
+;name=%3,number=40,type=0,dim=0,cnt=1
+;size:
+;val: 0
+
+;  %4 = alloca i32
+;name=%4,number=41,type=0,dim=0,cnt=1
+;size:
+;val: 0
+
+;  store i32 1, i32* %1
+;Rd=27 type=0 imm=1 type=0
+
+;  store i32 1, i32* %2
+;Rd=28 type=0 imm=1 type=0
+
+;  store i32 1, i32* %4
+;Rd=30 type=0 imm=1 type=0
+
+;  br label %5
+;contion=0 label1=1
+
+;%5:
+;num=1
+;  %6 = load i32, i32* %4
+;Rd=31 type=0 Rs=30 type=0
+
+;  %7 = icmp sle i32 %6, 10
+;Rd=32 Rs1=31 imm2=10 cond=5 type=0
+
+;  br i1 %7, label %8
+;contion=1 i1=32 label1=2 label2=-842150451
+
+;%8:
+;num=2
+;  %9 = load i32, i32* %1
+;Rd=33 type=0 Rs=27 type=0
+
+;  store i32 %9, i32* %3
+;Rd=29 type=0 Rs=33 type=0
+
+;  %10 = load i32, i32* %1
+;Rd=34 type=0 Rs=27 type=0
+
+;  %11 = load i32, i32* %2
+;Rd=35 type=0 Rs=28 type=0
+
+;  %12 = add i32 %10, %11
+;Rd=36 Rs1=34 Rs2=35 type=0
+
+;  store i32 %12, i32* %1
+;Rd=27 type=0 Rs=36 type=0
+
+;  %13 = load i32, i32* %3
+;Rd=37 type=0 Rs=29 type=0
+
+;  store i32 %13, i32* %2
+;Rd=28 type=0 Rs=37 type=0
+
+;  br label %14
+;contion=0 label1=3
+
+;%14:
+;num=3
+;  %15 = load i32, i32* %4
+;Rd=38 type=0 Rs=30 type=0
+
+;  %16 = add i32 %15, 1
+;Rd=39 Rs1=38 imm2=1 type=0
+
+;  store i32 %16, i32* %4
+;Rd=30 type=0 Rs=39 type=0
+
+;  br label %5
+;contion=0 label1=1
+
+;%17:
+;num=4
+;  ret void
+;type=2
+
+;size=36 formal_num=0 max_num=0
+;name=%1 imm=-20
+;name=%2 imm=-24
+;name=%3 imm=-28
+;name=%4 imm=-32
+
+;define i32 @main() {
+;name=@main number=4 formal=0
+;type:
+
+;  %1 = alloca i32
+;name=%1,number=42,type=0,dim=0,cnt=1
+;size:
+;val: 0
+
+;  %2 = alloca i32
+;name=%2,number=43,type=0,dim=0,cnt=1
+;size:
+;val: 0
+
+;  %3 = alloca i32
+;name=%3,number=44,type=0,dim=0,cnt=1
+;size:
+;val: 0
+
+;  %4 = alloca [3 x [2 x float]]
+;name=%4,number=45,type=1,dim=2,cnt=6
+;size: 3 2
+;val: 0 0 0 0 0 0
+
+;  store i32 0, i32* %1
+;Rd=40 type=0 imm=0 type=0
+
+;  store i32 -101, i32* %3
+;Rd=42 type=0 imm=4294967195 type=0
+
+;  %5 = load i32, i32* getelementptr ([5 x [3 x [2 x i32]]], [5 x [3 x [2 x i32]]]* @a, i32 0, i32 1, i32 2, i32 1)
+;Rd=44 type=0 Rs=2 type=0 imm=11
+
+;  %6 = icmp eq i32 %5, 1
+;Rd=45 Rs1=44 imm2=1 cond=0 type=0
+
+;  br i1 %6, label %7, label %11
+;contion=1 i1=45 label1=5 label2=6
+
+;%7:
+;num=5
+;  %8 = load i32, i32* getelementptr ([5 x [3 x [2 x i32]]], [5 x [3 x [2 x i32]]]* @a, i32 0, i32 1, i32 2, i32 0)
+;Rd=46 type=0 Rs=2 type=0 imm=10
+
+;  %9 = load i32, i32* getelementptr ([5 x [3 x [2 x i32]]], [5 x [3 x [2 x i32]]]* @a, i32 0, i32 2, i32 1, i32 0)
+;Rd=47 type=0 Rs=2 type=0 imm=14
+
+;  %10 = call i32 @add(i32 %8, i32 %9)
+;type=0 arg_cnt=2 ret_num=48
+;number=46 type=0
+;number=47 type=0
+
+;  store i32 %10, i32* %2
+;Rd=41 type=0 Rs=48 type=0
+
+;  br label %15
+;contion=0 label1=7
+
+;%11:
+;num=6
+;  %12 = load i32, i32* getelementptr ([5 x [3 x [2 x i32]]], [5 x [3 x [2 x i32]]]* @a, i32 0, i32 0, i32 2, i32 0)
+;Rd=49 type=0 Rs=2 type=0 imm=4
+
+;  %13 = load i32, i32* %3
+;Rd=50 type=0 Rs=42 type=0
+
+;  %14 = call i32 @add(i32 %12, i32 %13)
+;type=0 arg_cnt=2 ret_num=51
+;number=49 type=0
+;number=50 type=0
+
+;  store i32 %14, i32* %2
+;Rd=41 type=0 Rs=51 type=0
+
+;  br label %15
+;contion=0 label1=7
+
+;%15:
+;num=7
+;  call void @fibonacci()
+;type=2 arg_cnt=0
+
+;  %16 = load i32, i32* %1
+;Rd=52 type=0 Rs=40 type=0
+
+;  ret i32 %16
+;type=0 number=52
+
+;size=56 formal_num=0 max_num=2
+;name=%1 imm=-20
+;name=%2 imm=-24
+;name=%3 imm=-28
+;name=%4 imm=-32
