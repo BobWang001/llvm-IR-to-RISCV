@@ -53,7 +53,7 @@ define void @fibonacci() {
 5:                                                ; preds = %14, %0
   %6 = load i32, i32* %4
   %7 = icmp sle i32 %6, 10
-  br i1 %7, label %8
+  br i1 %7, label %8, label %17
 
 8:                                                ; preds = %5
   %9 = load i32, i32* %1
