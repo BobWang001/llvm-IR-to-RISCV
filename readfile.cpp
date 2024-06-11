@@ -27,6 +27,18 @@ void insert_instruction(functions* num_func,instruction* new_instruction)
 	num_func->ins_tail = new_instruction;
 }
 
+/*新申请一个局部虚拟寄存器*/
+Register_virtual* get_new_register(type_label name, functions* num_func)
+{
+	Register_virtual* new_regiser = new Register_virtual;
+	new_regiser->name = name;
+	new_regiser->num = ++total_register;
+	num_func->map_local_register[name] = new_regiser->num;
+	num_func->reg_tail->next = new_regiser;
+	num_func->reg_tail = new_regiser;
+	return new_regiser;
+}
+
 /*新申请一个局部变量*/
 variable_table* get_new_local(functions* num_func, std::string word)
 {
@@ -132,6 +144,9 @@ void new_variable(int op, std::string line, variable_table* tail, functions* num
 	printf(";%s\n", line.c_str());
 
 	variable_table* new_variable = new variable_table;
+	Register_virtual* new_register = new Register_virtual;
+	new_register->uesd = 0;
+	new_register->reg_phisical = -1;
 	bool is_ins = 0, name = 0, size_type = 0, val = 0;//标记是否已经找到了全局变量的名称，大小类型，初始值
 	int len = line.length();
 	for (int p = 0; p < len; )
@@ -183,6 +198,7 @@ void new_variable(int op, std::string line, variable_table* tail, functions* num
 		if (!name)
 		{
 			new_variable->name = word;
+			new_register->name = word;
 			name = 1;
 		}
 		else if (!size_type)
@@ -191,6 +207,7 @@ void new_variable(int op, std::string line, variable_table* tail, functions* num
 				new_variable->type = (word == "i32") ? 0 : 1;
 			else
 				new_variable_type(new_variable, word);
+			new_register->type = new_variable->type;
 			size_type = 1;
 		}
 		else if (!val)
@@ -210,9 +227,23 @@ void new_variable(int op, std::string line, variable_table* tail, functions* num
 	if (!is_ins)
 		return;
 	new_variable->num = total_global + 1;//记录编号
+	new_register->num = ++total_register;
 	if (op)
+	{
 		num_func->map_local[new_variable->name] = new_variable->num;
-	else map_global[new_variable->name] = new_variable->num;
+		num_func->map_local_register[new_register->name] = new_register->num;
+		/*插入alloca指令*/
+		instruction* new_alloca = new instruction;
+		new_alloca->op = 3;
+		new_alloca->Rd = new_register->num;
+		new_alloca->tRd = new_register->type;
+		insert_instruction(num_func, new_alloca);
+	}
+	else
+	{
+		map_global[new_variable->name] = new_variable->num;
+		map_global_register[new_register->name] = new_register->num;
+	}
 	total_global += new_variable->cnt;
 	//用0补齐
 	while (new_variable->val.size() < new_variable->cnt)
@@ -226,6 +257,8 @@ void new_variable(int op, std::string line, variable_table* tail, functions* num
 		num_func->total_actual += new_variable->cnt;
 		num_func->local_tail->next = new_variable;
 		num_func->local_tail = new_variable;
+		num_func->reg_tail->next = new_register;
+		num_func->reg_tail = new_register;
 	}
 
 	printf(";name=%s,number=%d,type=%d,dim=%d,cnt=%d\n", new_variable->name.c_str(), new_variable->num, new_variable->type, new_variable->dim, new_variable->cnt);
@@ -239,12 +272,130 @@ void new_variable(int op, std::string line, variable_table* tail, functions* num
 
 }
 
+
+vector<int> get_size(std::string name, functions* num_func)
+{
+	vector<int>ret;
+	if (map_global.count(name) != 0)
+	{
+		variable_table* head = global;
+		while (head->next != NULL)
+		{
+			head = head->next;
+			if (head->name == name)
+			{
+				for (auto it : head->size)
+					ret.push_back(it);
+				return ret;
+			}
+		}
+	}
+	else
+	{
+		variable_table* head = num_func->local_head;
+		while (head->next != NULL)
+		{
+			head = head->next;
+			if (head->name == name)
+			{
+				for (auto it : head->size)
+					ret.push_back(it);
+				return ret;
+			}
+		}
+	}
+	return ret;
+}
+
+void get_register_imm(instruction* new_load, std::string line, functions* num_func)
+{
+	bool fRs = 0;//标记是否已经找到了源变量
+	int len = line.length();
+	vector<int>size, size_gep;
+	for (int p = 0; p < len; )
+	{
+		if (line[p] == ' ' || line[p] == 9 || line[p] == '*' || line[p]==',' || line[p] == '(' || line[p] == ')')
+		{
+			p++;
+			continue;
+		}
+		if (line[p] == ';')
+			break;
+		/*获得单词：除了存在中括号进行括号匹配以外，其他均为读到空格停止*/
+		std::string word;
+		word.push_back(line[p]);
+		bool bracket = 0;
+		switch (line[p])
+		{
+			case '[':
+			{
+				bracket = 1;
+				int top = 1;
+				while (top)
+				{
+					p++;
+					if (line[p] == '[')
+						top++;
+					else if (line[p] == ']')
+						top--;
+				}
+				if (line[p] == ']')
+					p++;
+				break;
+			}
+			default:
+			{
+				p++;
+				while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
+				{
+					word.push_back(line[p]);
+					p++;
+				}
+				break;
+			}
+		}
+		if (bracket)
+			continue;
+		if (word == "=" || word == "getelementptr")
+			continue;
+		if (!fRs)
+		{
+			if (map_global_register.count(word) != 0)
+				new_load->Rs1 = map_global[word];
+			else
+				new_load->Rs1 = num_func->map_local_register[word];
+			size = get_size(word, num_func);
+			fRs = 1;
+		}
+		else
+		{
+			if (word[0] >= '0' && word[0] <= '9')
+				size_gep.push_back(atoi(word.c_str()));
+		}
+	}
+	int imm = 0, res = 1;
+	for (auto it : size)
+		res *= it;
+	int nw = 1;
+	for (auto it : size)
+	{
+		res /= it;
+		imm += res * size_gep[nw];
+		nw++;
+	}
+	new_load->fimm = 1;
+	new_load->imm = imm;
+	size_gep.clear(); size_gep.shrink_to_fit();
+	size.clear(); size.shrink_to_fit();
+}
+
 void new_load(int op,std::string line,functions* num_func)
 {
 
 	printf(";%s\n", line.c_str());
 
 	instruction* new_load = new instruction;
+	Register_virtual* new_register = new Register_virtual;
 	bool is_ins = 0, fRd = 0, tRd = 0, fRs = 0, tRs = 0;//标记是否已经找到了目的变量及其type，源变量及其type
 	int len = line.length();
 	for (int p = 0; p < len; )
@@ -268,21 +419,14 @@ void new_load(int op,std::string line,functions* num_func)
 			continue;
 		if (!fRd)
 		{
-			if (map_global.count(word) != 0)
-				new_load->Rd = map_global[word];
-			else if (num_func->map_local.count(word) != 0)
-				new_load->Rd = num_func->map_local[word];
-			else//之前没有给该变量分配空间的话就分配一个局部变量
-			{
-				++num_func->total_actual;
-				variable_table* new_local = get_new_local(num_func, word);
-				new_load->Rd = num_func->map_local[word] ;
-			}
+			new_register = get_new_register(word, num_func);
+			new_load->Rd = new_register->num;
 			fRd = 1;
 		}
 		else if (!tRd)
 		{
 			new_load->tRd = ((word == "i32") ? 0 : 1);
+			new_register->type = new_load->tRd;
 			tRd = 1;
 		}
 		else if (!tRs)
@@ -292,10 +436,18 @@ void new_load(int op,std::string line,functions* num_func)
 		}
 		else if (!fRs)
 		{
-			if (map_global.count(word) != 0)
-				new_load->Rs1 = map_global[word];
+			if (word == "getelementptr")
+			{
+				std:string ret = line.substr(p+1);
+				get_register_imm(new_load, ret, num_func);
+			}
 			else
-				new_load->Rs1 = num_func->map_local[word];
+			{
+				if (map_global_register.count(word) != 0)
+					new_load->Rs1 = map_global_register[word];
+				else
+					new_load->Rs1 = num_func->map_local_register[word];
+			}
 			fRs = 1;
 		}
 	}
@@ -306,8 +458,10 @@ void new_load(int op,std::string line,functions* num_func)
 	new_load->op = op;
 	insert_instruction(num_func, new_load);
 
-	printf(";Rd=%d type=%d Rs=%d type=%d\n", new_load->Rd, new_load->tRd, new_load->Rs1, new_load->tRs1);
-	printf("\n");
+	printf(";Rd=%d type=%d Rs=%d type=%d ", new_load->Rd, new_load->tRd, new_load->Rs1, new_load->tRs1);
+	if (new_load->fimm)
+		printf("imm=%d", new_load->imm);
+	printf("\n\n");
 
 }
 
@@ -356,10 +510,10 @@ void new_store(int op, std::string line, functions* num_func)
 			else//非立即数
 			{
 				new_store->fimm = 0;
-				if (map_global.count(word) != 0)
-					new_store->Rs1 = map_global[word];
+				if (map_global_register.count(word) != 0)
+					new_store->Rs1 = map_global_register[word];
 				else
-					new_store->Rs1 = num_func->map_local[word];
+					new_store->Rs1 = num_func->map_local_register[word];
 			}
 			fRs_imm = 1;
 		}
@@ -370,10 +524,10 @@ void new_store(int op, std::string line, functions* num_func)
 		}
 		else if (!fRd)
 		{
-			if (map_global.count(word) != 0)
-				new_store->Rd = map_global[word];
+			if (map_global_register.count(word) != 0)
+				new_store->Rd = map_global_register[word];
 			else
-				new_store->Rd = num_func->map_local[word];
+				new_store->Rd = num_func->map_local_register[word];
 			fRd = 1;
 		}
 	}
@@ -393,40 +547,6 @@ void new_store(int op, std::string line, functions* num_func)
 
 }
 
-vector<int> get_size(std::string name, functions* num_func)
-{
-	vector<int>ret;
-	if (map_global.count(name) != 0)
-	{
-		variable_table* head = global;
-		while (head->next != NULL)
-		{
-			head = head->next;
-			if (head->name == name)
-			{
-				for (auto it : head->size)
-					ret.push_back(it);
-				return ret;
-			}
-		}
-	}
-	else
-	{
-		variable_table* head = num_func->local_head;
-		while (head->next != NULL)
-		{
-			head = head->next;
-			if (head->name == name)
-			{
-				for (auto it : head->size)
-					ret.push_back(it);
-				return ret;
-			}
-		}
-	}
-	return ret;
-}
-
 void new_GEP(int op, std::string line, functions* num_func)
 {
 
@@ -435,11 +555,11 @@ void new_GEP(int op, std::string line, functions* num_func)
 	instruction* new_gep = new instruction;
 	bool is_ins = 0, fRd = 0, fRs = 0;//标记是否已经找到了目的变量，源变量
 	int len = line.length();
-	variable_table* new_variable;
+	Register_virtual* new_register;
 	vector<int>size, size_gep;
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == 9 || line[p] == '*')
+		if (line[p] == ' ' || line[p] == 9 || line[p] == '*' || line[p]==',' || line[p] == '(' || line[p] == ')')
 		{
 			p++;
 			continue;
@@ -472,7 +592,7 @@ void new_GEP(int op, std::string line, functions* num_func)
 			default:
 			{
 				p++;
-				while (p < len && line[p] != ' ' && line[p] != ';')
+				while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
 				{
 					word.push_back(line[p]);
 					p++;
@@ -486,24 +606,16 @@ void new_GEP(int op, std::string line, functions* num_func)
 			continue;
 		if (!fRd)
 		{
-			if (map_global.count(word) != 0)
-				new_gep->Rd = map_global[word];
-			else if (num_func->map_local.count(word) != 0)
-				new_gep->Rd = num_func->map_local[word];
-			else//之前没有给该变量分配空间的话就分配一个局部变量
-			{
-				++num_func->total_actual;
-				new_variable = get_new_local(num_func, word);
-				new_gep->Rd = num_func->map_local[word];
-			}
+			new_register = get_new_register(word, num_func);
+			new_gep->Rd = new_register->num;
 			fRd = 1;
 		}
 		else if (!fRs)
 		{
-			if (map_global.count(word) != 0)
-				new_gep->Rs1 = map_global[word];
+			if (map_global_register.count(word) != 0)
+				new_gep->Rs1 = map_global_register[word];
 			else
-				new_gep->Rs1 = num_func->map_local[word];
+				new_gep->Rs1 = num_func->map_local_register[word];
 			size = get_size(word, num_func);
 			fRs = 1;
 		}
@@ -521,7 +633,7 @@ void new_GEP(int op, std::string line, functions* num_func)
 	int imm = 0, res = 1;
 	for (auto it : size)
 		res *= it;
-	int nw = 0;
+	int nw = 1;
 	for (auto it : size)
 	{
 		res /= it;
@@ -534,6 +646,9 @@ void new_GEP(int op, std::string line, functions* num_func)
 	printf(";Rd=%d Rs=%d imm=%d\n", new_gep->Rd, new_gep->Rs1, new_gep->imm);
 	printf("\n");
 
+	size_gep.clear(); size_gep.shrink_to_fit();
+	size.clear(); size.shrink_to_fit();
+
 }
 
 void new_operation(int op, std::string line, functions* num_func)
@@ -542,6 +657,7 @@ void new_operation(int op, std::string line, functions* num_func)
 	printf(";%s\n", line.c_str());
 
 	instruction* new_operation = new instruction;
+	Register_virtual* new_register = new Register_virtual;
 	bool is_ins = 0, fRd = 0, fRs1_imm = 0, fRs2_imm = 0, type = 0;//标记是否已经找到了目的变量及其type，源变量(1/2)及其type
 	int len = line.length();
 	for (int p = 0; p < len; )
@@ -566,16 +682,8 @@ void new_operation(int op, std::string line, functions* num_func)
 			continue;
 		if (!fRd)
 		{
-			if (map_global.count(word) != 0)
-				new_operation->Rd = map_global[word];
-			else if (num_func->map_local.count(word) != 0)
-				new_operation->Rd = num_func->map_local[word];
-			else//之前没有给该变量分配空间的话就分配一个局部变量
-			{
-				++num_func->total_actual;
-				variable_table* new_local = get_new_local(num_func, word);
-				new_operation->Rd = num_func->map_local[word];
-			}
+			new_register = get_new_register(word, num_func);
+			new_operation->Rd = new_register->num;
 			fRd = 1;
 		}
 		else if (!type)
@@ -596,10 +704,10 @@ void new_operation(int op, std::string line, functions* num_func)
 			else//非立即数
 			{
 				new_operation->fimm1 = 0;
-				if (map_global.count(word) != 0)
-					new_operation->Rs1 = map_global[word];
+				if (map_global_register.count(word) != 0)
+					new_operation->Rs1 = map_global_register[word];
 				else
-					new_operation->Rs1 = num_func->map_local[word];
+					new_operation->Rs1 = num_func->map_local_register[word];
 			}
 			fRs1_imm = 1;
 		}
@@ -616,10 +724,10 @@ void new_operation(int op, std::string line, functions* num_func)
 			else//非立即数
 			{
 				new_operation->fimm2 = 0;
-				if (map_global.count(word) != 0)
-					new_operation->Rs2 = map_global[word];
+				if (map_global_register.count(word) != 0)
+					new_operation->Rs2 = map_global_register[word];
 				else
-					new_operation->Rs2 = num_func->map_local[word];
+					new_operation->Rs2 = num_func->map_local_register[word];
 			}
 			fRs2_imm = 1;
 		}
@@ -648,6 +756,7 @@ void new_xcmp(int op, std::string line, functions* num_func)
 	printf(";%s\n", line.c_str());
 
 	instruction* new_xcmp = new instruction;
+	Register_virtual* new_register = new Register_virtual;
 	bool is_ins = 0, fRd = 0, cond = 0, fRs1_imm = 0, fRs2_imm = 0, type = 0;//标记是否已经找到了目的变量及其type，源变量(1/2)及其type
 	int len = line.length();
 	for (int p = 0; p < len; )
@@ -671,16 +780,8 @@ void new_xcmp(int op, std::string line, functions* num_func)
 			continue;
 		if (!fRd)
 		{
-			if (map_global.count(word) != 0)
-				new_xcmp->Rd = map_global[word];
-			else if (num_func->map_local.count(word) != 0)
-				new_xcmp->Rd = num_func->map_local[word];
-			else//之前没有给该变量分配空间的话就分配一个局部变量
-			{
-				++num_func->total_actual;
-				variable_table* new_local = get_new_local(num_func, word);
-				new_xcmp->Rd = num_func->map_local[word];
-			}
+			new_register = get_new_register(word, num_func);
+			new_xcmp->Rd = new_register->num;
 			fRd = 1;
 		}
 		else if (!cond)
@@ -706,10 +807,10 @@ void new_xcmp(int op, std::string line, functions* num_func)
 			else//非立即数
 			{
 				new_xcmp->fimm1 = 0;
-				if (map_global.count(word) != 0)
-					new_xcmp->Rs1 = map_global[word];
+				if (map_global_register.count(word) != 0)
+					new_xcmp->Rs1 = map_global_register[word];
 				else
-					new_xcmp->Rs1 = num_func->map_local[word];
+					new_xcmp->Rs1 = num_func->map_local_register[word];
 			}
 			fRs1_imm = 1;
 		}
@@ -726,10 +827,10 @@ void new_xcmp(int op, std::string line, functions* num_func)
 			else//非立即数
 			{
 				new_xcmp->fimm2 = 0;
-				if (map_global.count(word) != 0)
-					new_xcmp->Rs2 = map_global[word];
+				if (map_global_register.count(word) != 0)
+					new_xcmp->Rs2 = map_global_register[word];
 				else
-					new_xcmp->Rs2 = num_func->map_local[word];
+					new_xcmp->Rs2 = num_func->map_local_register[word];
 			}
 			fRs2_imm = 1;
 		}
@@ -794,10 +895,10 @@ void new_branch(int op, std::string line, functions* num_func)
 		}
 		if (!cond)
 		{
-			if (map_global.count(word) != 0)
-				new_branch->Rs1 = map_global[word];
+			if (map_global_register.count(word) != 0)
+				new_branch->Rs1 = map_global_register[word];
 			else
-				new_branch->Rs1 = num_func->map_local[word];
+				new_branch->Rs1 = num_func->map_local_register[word];
 			cond = 1;
 		}
 		else if (!label1)
@@ -854,9 +955,9 @@ void get_instruction_args(instruction* ins, std::string line, functions* num_fun
 		}
 		else//参数名,新增一个局部变量
 		{
-			if (map_global.count(word) != 0)
-				ins->formal_num.push_back(map_global[word]);
-			else ins->formal_num.push_back(num_func->map_local[word]);
+			if (map_global_register.count(word) != 0)
+				ins->formal_num.push_back(map_global_register[word]);
+			else ins->formal_num.push_back(num_func->map_local_register[word]);
 		}
 	}
 }
@@ -867,6 +968,7 @@ void new_call(int op, std::string line, functions* num_func)
 	printf(";%s\n", line.c_str());
 
 	instruction* new_call = new instruction;
+	Register_virtual* new_register = new Register_virtual;
 	bool is_ins = 0, fRd = 0, tRd = 0, name = 0;//标记是否已经找到了目的变量及其type，被调函数名
 	int len = line.length();
 	for (int p = 0; p < len; )
@@ -897,16 +999,8 @@ void new_call(int op, std::string line, functions* num_func)
 			}
 			else
 			{
-				if (map_global.count(word) != 0)
-					new_call->Rd = map_global[word];
-				else if (num_func->map_local.count(word) != 0)
-					new_call->Rd = num_func->map_local[word];
-				else//之前没有给该变量分配空间的话就分配一个局部变量
-				{
-					++num_func->total_actual;
-					variable_table* new_local = get_new_local(num_func, word);
-					new_call->Rd = num_func->map_local[word];
-				}
+				new_register = get_new_register(word, num_func);
+				new_call->Rd = new_register->num;
 			}
 			fRd = 1;
 		}
@@ -998,9 +1092,9 @@ void new_ret(int op, std::string line, functions* num_func)
 		}
 		else if (!tRs)
 		{
-			if (map_global.count(word) != 0)
-				new_ret->Rs1 = map_global[word];
-			else new_ret->Rs1 = num_func->map_local[word];
+			if (map_global_register.count(word) != 0)
+				new_ret->Rs1 = map_global_register[word];
+			else new_ret->Rs1 = num_func->map_local_register[word];
 			tRs = 1;
 		}
 	}
@@ -1044,10 +1138,10 @@ void get_args(functions* new_function, std::string line)
 			new_function->args.push_back((word == "i32") ? 0 : 1);
 			last_type = (word == "i32") ? 0 : 1;
 		}
-		else//参数名,新增一个局部变量
+		else//参数名,新增一个局部寄存器
 		{
-			variable_table* new_local = get_new_local(new_function, word);
-			new_local->type = last_type;
+			Register_virtual* new_register = get_new_register(word, new_function);
+			new_register->type = last_type;
 		}
 	}
 }
@@ -1152,6 +1246,71 @@ void end_function(functions* now_function)
 	}
 	printf("\n");
 
+}
+
+int check_label(std::string s)
+{
+	int len = s.length();
+	for (int p = 0; p < len; ++p)
+	{
+		if (s[p] == ' ' || s[p] == 9)
+			continue;
+		if (s[p] == ';')
+			return 0;
+		if (s[p] == ':')
+			return 1;
+	}
+	return 0;
+}
+
+std::string get_label(std::string s)
+{
+	int len = s.length();
+	std::string ret = "%";
+	for (int p = 0; p < len;)
+	{
+		if (s[p] == ' ' || s[p] == 9)
+		{
+			p++;
+			continue;
+		}
+		while (s[p] != ':')
+		{
+			ret.push_back(s[p]);
+			p++;
+		}
+		break;
+	}
+	return ret;
+}
+
+void new_label(int op, type_label label, functions* num_func)
+{
+
+	printf(";%s:\n", label.c_str());
+
+	instruction* new_label = new instruction;
+	new_label->op = op;
+	new_label->L1 = label_num[label];
+	insert_instruction(num_func, new_label);
+
+	printf(";num=%d\n", new_label->L1);
+
+}
+
+std::string get_new_line(std::string line)
+{
+	int len = line.length();
+	std::string ret;
+	for (int p = 0; p < len; ++p)
+	{
+		if (line[p] == ':')
+		{
+			ret = line.substr(p + 1);
+			break;
+		}
+	}
+	return ret;
 }
 
 void read(int option, std::string line, functions* num_func, bool in_func)//读入
