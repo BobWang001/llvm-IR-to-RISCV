@@ -1,33 +1,37 @@
 #include "riscv.h"
 
 extern Register_physical reg[2][num_registers];
-extern map<type_label, int>map_global_register;//È«¾Ö¼Ä´æÆ÷Ãûµ½±àºÅµÄÓ³Éä
-extern map<int, Register_virtual*>map_global_register_position;//È«¾Ö¼Ä´æÆ÷±àºÅµ½Ö¸ÕëµÄÓ³Éä
-extern map<int, Register_virtual*>map_local_register_position;//¾Ö²¿ĞéÄâ¼Ä´æÆ÷±àºÅµ½Ö¸ÕëµÄÓ³Éä
-extern map<int, std::string>map_physical_reg_name[2];//ÎïÀí¼Ä´æÆ÷±àºÅµ½Ãû³ÆµÄÓ³Éä
-extern vector<bool>physical_reg_usable[2];//ÎïÀí¼Ä´æÆ÷ÄÜ·ñÊ¹ÓÃ
-extern vector<int>physical_reg_order[2];//¿¼ÂÇ·ÖÅäÎïÀí¼Ä´æÆ÷µÄË³Ğò
+extern map<type_label, int>map_global_register;//å…¨å±€å¯„å­˜å™¨ååˆ°ç¼–å·çš„æ˜ å°„
+extern map<int, Register_virtual*>map_global_register_position;//å…¨å±€å¯„å­˜å™¨ç¼–å·åˆ°æŒ‡é’ˆçš„æ˜ å°„
+extern map<int, Register_virtual*>map_local_register_position;//å±€éƒ¨è™šæ‹Ÿå¯„å­˜å™¨ç¼–å·åˆ°æŒ‡é’ˆçš„æ˜ å°„
+extern map<int, std::string>map_physical_reg_name;//ç‰©ç†å¯„å­˜å™¨ç¼–å·åˆ°åç§°çš„æ˜ å°„
+extern vector<bool>physical_reg_usable[2];//ç‰©ç†å¯„å­˜å™¨èƒ½å¦ä½¿ç”¨
+extern vector<int>physical_reg_order[2];//è€ƒè™‘åˆ†é…ç‰©ç†å¯„å­˜å™¨çš„é¡ºåº
+extern vector<int>physical_reg_saved[2];//special,caller_saved,callee_saved
 extern int total_register;
 
 extern variable_table* global, * global_tail;
-extern int total_global;//´æ´¢±äÁ¿µÄÊıÁ¿
-extern map<type_variables, int>map_global;//±äÁ¿Ãûµ½±àºÅµÄÓ³Éä
-extern map<int, int>map_register_local;//¼Ä´æÆ÷±àºÅµ½±äÁ¿±àºÅµÄÓ³Éä
+extern int total_global;//å­˜å‚¨å˜é‡çš„æ•°é‡
+extern map<type_variables, int>map_global;//å˜é‡ååˆ°ç¼–å·çš„æ˜ å°„
+extern map<int, variable_table*>map_variable_position;//å±€éƒ¨å˜é‡ç¼–å·åˆ°æŒ‡é’ˆçš„æ˜ å°„
+extern map<int, int>map_register_local;//å¯„å­˜å™¨ç¼–å·åˆ°å˜é‡ç¼–å·çš„æ˜ å°„
 
-extern instruction* start;//ÊôÓÚÈ«¾ÖµÄÖ¸Áî
+extern instruction* start;//å±äºå…¨å±€çš„æŒ‡ä»¤
 extern map<std::string, int>ins_num, cond_num;
-extern int tot_instructions;//×ÜµÄÖ¸ÁîÊı
-extern set<int>ins_definied;//»á¶¨ÒåĞéÄâ¼Ä´æÆ÷µÄÖ¸Áî(³ıcall)
-extern set<int>ins_used;//»áÊ¹ÓÃĞéÄâ¼Ä´æÆ÷µÄÖ¸Áî
-extern set<int>ins_valuate;//»á¶ÔRd¸³ÖµµÄÖ¸Áî
-extern map<int, instruction*>map_instruction_position;//Ö¸Áî±àºÅµ½Ö¸ÕëµÄÓ³Éä
-extern map<int, pair<int, int> >map_ins_copy;//¼ÇÂ¼copyÖ¸ÁîµÄÎ»ÖÃ
+extern int tot_instructions;//æ€»çš„æŒ‡ä»¤æ•°
+extern int tot_asm_instructions;//æ€»çš„æ±‡ç¼–æŒ‡ä»¤æ•°
+extern set<int>ins_definied;//ä¼šå®šä¹‰è™šæ‹Ÿå¯„å­˜å™¨çš„æŒ‡ä»¤(é™¤call)
+extern set<int>ins_used;//ä¼šä½¿ç”¨è™šæ‹Ÿå¯„å­˜å™¨çš„æŒ‡ä»¤
+extern set<int>ins_valuate;//ä¼šå¯¹Rdèµ‹å€¼çš„æŒ‡ä»¤
+extern map<int, instruction*>map_instruction_position;//æŒ‡ä»¤ç¼–å·åˆ°æŒ‡é’ˆçš„æ˜ å°„
+extern map<int, pair<int, int> >map_ins_copy;//è®°å½•copyæŒ‡ä»¤çš„ä½ç½®
+extern map<int, std::string>map_asm;//æ±‡ç¼–æŒ‡ä»¤ä»£ç åˆ°å­—ç¬¦æ˜ å°„
 
 extern map<type_label, int>label_num;
-extern map<int, int>label_ins;//labelµ½Ö¸ÁîµÄÓ³Éä
-extern vector<basic_block*>label_bb;//label±àºÅ¶ÔÓ¦µÄbb±àºÅ
+extern map<int, int>label_ins;//labelåˆ°æŒ‡ä»¤çš„æ˜ å°„
+extern vector<basic_block*>label_bb;//labelç¼–å·å¯¹åº”çš„bbç¼–å·
 extern int tot_label;
 
 extern functions* func_head, * func_tail;
 extern map<type_label, int>map_function;
-extern int tot_functions;//×ÜµÄº¯ÊıÊı
+extern int tot_functions;//æ€»çš„å‡½æ•°æ•°
