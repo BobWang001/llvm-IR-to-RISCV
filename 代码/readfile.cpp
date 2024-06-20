@@ -1,31 +1,33 @@
 #include "riscv.h"
 
-extern map<int, Register_virtual*>map_global_register_position;//È«¾Ö¼Ä´æÆ÷±àºÅµ½Ö¸ÕëµÄÓ³Éä
-extern map<int, Register_virtual*>map_local_register_position;//¾Ö²¿ĞéÄâ¼Ä´æÆ÷±àºÅµ½Ö¸ÕëµÄÓ³Éä
-extern map<int, int>map_register_local;//¼Ä´æÆ÷±àºÅµ½±äÁ¿±àºÅµÄÓ³Éä
-extern int total_global;//´æ´¢±äÁ¿µÄÊıÁ¿
+extern map<int, Register_virtual*>map_global_register_position;//å…¨å±€å¯„å­˜å™¨ç¼–å·åˆ°æŒ‡é’ˆçš„æ˜ å°„
+extern map<int, Register_virtual*>map_local_register_position;//å±€éƒ¨è™šæ‹Ÿå¯„å­˜å™¨ç¼–å·åˆ°æŒ‡é’ˆçš„æ˜ å°„
+extern map<int, int>map_register_local;//å¯„å­˜å™¨ç¼–å·åˆ°å˜é‡ç¼–å·çš„æ˜ å°„
+extern map<int, int>map_register_local_alloca;//allocaè¯­å¥å†…å¯„å­˜å™¨ç¼–å·åˆ°å˜é‡ç¼–å·çš„æ˜ å°„
+extern int total_global;//å­˜å‚¨å˜é‡çš„æ•°é‡
 extern variable_table* global, * global_tail;
-extern int tot_instructions;//×ÜµÄÖ¸ÁîÊı
+extern int tot_instructions;//æ€»çš„æŒ‡ä»¤æ•°
 extern map<std::string, int>cond_num;
 extern map<type_label, int>label_num;
-extern map<int, int>label_ins;//labelµ½Ö¸ÁîµÄÓ³Éä
+extern map<int, int>label_ins;//labelåˆ°æŒ‡ä»¤çš„æ˜ å°„
 extern int tot_label;
-extern map<int, instruction*>map_instruction_position;//Ö¸Áî±àºÅµ½Ö¸ÕëµÄÓ³Éä
+extern map<int, instruction*>map_instruction_position;//æŒ‡ä»¤ç¼–å·åˆ°æŒ‡é’ˆçš„æ˜ å°„
+extern map<int, variable_table*>map_variable_position;//å˜é‡ç¼–å·åˆ°æŒ‡é’ˆçš„æ˜ å°„
 
-unsigned int floatToBinary(float num)//½«¸¡µãÊı×ª»»Îª¶ÔÓ¦µÄ¶ş½øÖÆÊı
+unsigned int floatToBinary(float num)//å°†æµ®ç‚¹æ•°è½¬æ¢ä¸ºå¯¹åº”çš„äºŒè¿›åˆ¶æ•°
 {
-	// Ê¹ÓÃunionÀ´·ÃÎÊfloatµÄÎ»±íÊ¾
+	// ä½¿ç”¨unionæ¥è®¿é—®floatçš„ä½è¡¨ç¤º
 	union
 	{
 		float f;
 		unsigned int i;
 	}b;
 	b.f = num;
-	std::bitset<32> bs(b.i); // ´´½¨Ò»¸ö32Î»µÄbitset
+	std::bitset<32> bs(b.i); // åˆ›å»ºä¸€ä¸ª32ä½çš„bitset
 	return bs.to_ulong();
 }
 
-/*ÔÚ¸Ãº¯ÊıµÄÖ¸ÁîÄ©Î²²åÈëÒ»ÌõÖ¸Áî*/
+/*åœ¨è¯¥å‡½æ•°çš„æŒ‡ä»¤æœ«å°¾æ’å…¥ä¸€æ¡æŒ‡ä»¤*/
 void insert_instruction(functions* num_func,instruction* new_instruction)
 {
 	map_instruction_position[new_instruction->num] = new_instruction;
@@ -33,7 +35,7 @@ void insert_instruction(functions* num_func,instruction* new_instruction)
 	num_func->ins_tail = new_instruction;
 }
 
-/*ĞÂÉêÇëÒ»¸ö¾Ö²¿ĞéÄâ¼Ä´æÆ÷*/
+/*æ–°ç”³è¯·ä¸€ä¸ªå±€éƒ¨è™šæ‹Ÿå¯„å­˜å™¨*/
 void get_new_register(Register_virtual* new_register, type_label name, functions* num_func)
 {
 	new_register->name = name;
@@ -69,7 +71,7 @@ void new_variable_type(variable_table* new_global, std::string word)
 			new_global->type = 1;
 		else
 		{
-			int val = atoi(ret.c_str());//¸ÃÎ¬¶ÈµÄ´óĞ¡
+			int val = atoi(ret.c_str());//è¯¥ç»´åº¦çš„å¤§å°
 			new_global->dim++;
 			new_global->size.push_back(val);
 			new_global->cnt *= val;
@@ -113,7 +115,7 @@ void new_variable_value(variable_table* new_global, std::string word)
 			}
 			if (find_brack)
 				continue;
-			find_num = 1;//ÕÒµ½Ò»¸öÖµ
+			find_num = 1;//æ‰¾åˆ°ä¸€ä¸ªå€¼
 			while ((word[p] >= '0' && word[p] <= '9') || word[p] == '.' || word[p]=='-')
 			{
 				num.push_back(word[p]);
@@ -130,7 +132,7 @@ void new_variable_value(variable_table* new_global, std::string word)
 	}
 }
 
-void new_variable(int op, std::string line, variable_table* tail, functions* num_func = NULL)
+void new_variable(int op, std::string line, functions* num_func = NULL)
 {
 
 	printf(";%s\n", line.c_str());
@@ -139,7 +141,7 @@ void new_variable(int op, std::string line, variable_table* tail, functions* num
 	Register_virtual* new_register = new Register_virtual;
 	new_register->used = 0;
 	new_register->reg_phisical = -1;
-	bool is_ins = 0, name = 0, size_type = 0, val = 0;//±ê¼ÇÊÇ·ñÒÑ¾­ÕÒµ½ÁËÈ«¾Ö±äÁ¿µÄÃû³Æ£¬´óĞ¡ÀàĞÍ£¬³õÊ¼Öµ
+	bool is_ins = 0, name = 0, size_type = 0, val = 0;//æ ‡è®°æ˜¯å¦å·²ç»æ‰¾åˆ°äº†å…¨å±€å˜é‡çš„åç§°ï¼Œå¤§å°ç±»å‹ï¼Œåˆå§‹å€¼
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
@@ -150,7 +152,7 @@ void new_variable(int op, std::string line, variable_table* tail, functions* num
 		}
 		if (line[p] == ';')
 			break;
-		/*»ñµÃµ¥´Ê£º³ıÁË´æÔÚÖĞÀ¨ºÅ½øĞĞÀ¨ºÅÆ¥ÅäÒÔÍâ£¬ÆäËû¾ùÎª¶Áµ½¿Õ¸ñÍ£Ö¹*/
+		/*è·å¾—å•è¯ï¼šé™¤äº†å­˜åœ¨ä¸­æ‹¬å·è¿›è¡Œæ‹¬å·åŒ¹é…ä»¥å¤–ï¼Œå…¶ä»–å‡ä¸ºè¯»åˆ°ç©ºæ ¼åœæ­¢*/
 		is_ins = 1;
 		std::string word;
 		word.push_back(line[p]);
@@ -199,16 +201,16 @@ void new_variable(int op, std::string line, variable_table* tail, functions* num
 				new_variable->type = ((word == "i32") ? 0 : ((word == "float") ? 1 : 2));
 			else
 				new_variable_type(new_variable, word);
-			new_register->type = i64;//¼Ä´æÆ÷´æµÄ64Î»µØÖ·
+			new_register->type = i64;//å¯„å­˜å™¨å­˜çš„64ä½åœ°å€
 			size_type = 1;
 		}
 		else if (!val)
 		{
 			if (word[0] != '[')
 			{
-				if (new_variable->type == 0)//ÕûÊıÖ±½Ó¸³Öµ
+				if (new_variable->type == 0)//æ•´æ•°ç›´æ¥èµ‹å€¼
 					new_variable->val.push_back(atoi(word.c_str()));
-				else//¸¡µãÊıĞèÒª×ª»»Ò»ÏÂ
+				else//æµ®ç‚¹æ•°éœ€è¦è½¬æ¢ä¸€ä¸‹
 					new_variable->val.push_back(floatToBinary(atof(word.c_str())));
 			}
 			else
@@ -218,16 +220,16 @@ void new_variable(int op, std::string line, variable_table* tail, functions* num
 	}
 	if (!is_ins)
 		return;
-	new_variable->num = total_global + 1;//¼ÇÂ¼±àºÅ
+	new_variable->num = total_global + 1;//è®°å½•ç¼–å·
 	new_register->num = ++total_register;
-	map_register_local[new_register->num] = new_variable->num;
+	map_register_local_alloca[new_register->num] = new_variable->num;
 	if (op)
 	{
 		num_func->map_local[new_variable->name] = new_variable->num;
 		num_func->map_local_register[new_register->name] = new_register->num;
 		num_func->map_local_register_position[new_register->num] = new_register;
 		map_local_register_position[new_register->num] = new_register;
-		/*²åÈëallocaÖ¸Áî*/
+		/*æ’å…¥allocaæŒ‡ä»¤*/
 		instruction* new_alloca = new instruction;
 		new_alloca->num = ++tot_instructions;
 		new_alloca->op = 3;
@@ -242,13 +244,9 @@ void new_variable(int op, std::string line, variable_table* tail, functions* num
 		map_global_register_position[new_register->num] = new_register;
 	}
 	total_global += new_variable->cnt;
-	//ÓÃ0²¹Æë
-	while (new_variable->val.size() < new_variable->cnt)
-		new_variable->val.push_back(0);
 	new_variable->next = NULL;
-	tail->next = new_variable;
-	tail = new_variable;
-	//¼ÓÈë¾Ö²¿±äÁ¿
+	map_variable_position[new_variable->num] = new_variable;
+	//åŠ å…¥å±€éƒ¨å˜é‡
 	if (op)
 	{
 		num_func->total_actual += new_variable->cnt;
@@ -257,8 +255,13 @@ void new_variable(int op, std::string line, variable_table* tail, functions* num
 		num_func->reg_tail->next = new_register;
 		num_func->reg_tail = new_register;
 	}
+	else
+	{
+		global_tail->next = new_variable;
+		global_tail = new_variable;
+	}
 
-	printf(";register_name=%s,type=%d\n", new_register->name.c_str(), new_register->type);
+	printf(";register_name=%s,number=%d,type=%d\n", new_register->name.c_str(), new_register->num, new_register->type);
 	printf(";variable_name=%s,number=%d,type=%d,dim=%d,cnt=%d\n", new_variable->name.c_str(), new_variable->num, new_variable->type, new_variable->dim, new_variable->cnt);
 	printf(";size: ");
 	for (auto it : new_variable->size)
@@ -307,7 +310,7 @@ vector<int> get_size(std::string name, functions* num_func)
 
 void get_register_imm(instruction* new_load, std::string line, functions* num_func)
 {
-	bool fRs = 0;//±ê¼ÇÊÇ·ñÒÑ¾­ÕÒµ½ÁËÔ´±äÁ¿
+	bool fRs = 0;//æ ‡è®°æ˜¯å¦å·²ç»æ‰¾åˆ°äº†æºå˜é‡
 	int len = line.length();
 	vector<int>size, size_gep;
 	for (int p = 0; p < len; )
@@ -319,7 +322,7 @@ void get_register_imm(instruction* new_load, std::string line, functions* num_fu
 		}
 		if (line[p] == ';')
 			break;
-		/*»ñµÃµ¥´Ê£º³ıÁË´æÔÚÖĞÀ¨ºÅ½øĞĞÀ¨ºÅÆ¥ÅäÒÔÍâ£¬ÆäËû¾ùÎª¶Áµ½¿Õ¸ñÍ£Ö¹*/
+		/*è·å¾—å•è¯ï¼šé™¤äº†å­˜åœ¨ä¸­æ‹¬å·è¿›è¡Œæ‹¬å·åŒ¹é…ä»¥å¤–ï¼Œå…¶ä»–å‡ä¸ºè¯»åˆ°ç©ºæ ¼åœæ­¢*/
 		std::string word;
 		word.push_back(line[p]);
 		bool bracket = 0;
@@ -394,7 +397,7 @@ void new_load(int op,std::string line,functions* num_func)
 
 	instruction* new_load = new instruction;
 	Register_virtual* new_register = new Register_virtual;
-	bool is_ins = 0, fRd = 0, tRd = 0, fRs = 0, tRs = 0;//±ê¼ÇÊÇ·ñÒÑ¾­ÕÒµ½ÁËÄ¿µÄ±äÁ¿¼°Æätype£¬Ô´±äÁ¿¼°Æätype
+	bool is_ins = 0, fRd = 0, tRd = 0, fRs = 0, tRs = 0;//æ ‡è®°æ˜¯å¦å·²ç»æ‰¾åˆ°äº†ç›®çš„å˜é‡åŠå…¶typeï¼Œæºå˜é‡åŠå…¶type
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
@@ -405,7 +408,7 @@ void new_load(int op,std::string line,functions* num_func)
 		}
 		if (line[p] == ';')
 			break;
-		/*»ñµÃµ¥´Ê£º³ıÁË´æÔÚÖĞÀ¨ºÅ½øĞĞÀ¨ºÅÆ¥ÅäÒÔÍâ£¬ÆäËû¾ùÎª¶Áµ½¿Õ¸ñÍ£Ö¹*/
+		/*è·å¾—å•è¯ï¼šé™¤äº†å­˜åœ¨ä¸­æ‹¬å·è¿›è¡Œæ‹¬å·åŒ¹é…ä»¥å¤–ï¼Œå…¶ä»–å‡ä¸ºè¯»åˆ°ç©ºæ ¼åœæ­¢*/
 		is_ins = 1;
 		std::string word;
 		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
@@ -469,7 +472,7 @@ void new_store(int op, std::string line, functions* num_func)
 	printf(";%s\n", line.c_str());
 
 	instruction* new_store = new instruction;
-	bool is_ins = 0, fRd = 0, tRd = 0, fRs_imm = 0, tRs_imm = 0;//±ê¼ÇÊÇ·ñÒÑ¾­ÕÒµ½ÁËÄ¿µÄ±äÁ¿¼°Æätype£¬Ô´±äÁ¿¼°Æätype
+	bool is_ins = 0, fRd = 0, tRd = 0, fRs_imm = 0, tRs_imm = 0;//æ ‡è®°æ˜¯å¦å·²ç»æ‰¾åˆ°äº†ç›®çš„å˜é‡åŠå…¶typeï¼Œæºå˜é‡åŠå…¶type
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
@@ -480,7 +483,7 @@ void new_store(int op, std::string line, functions* num_func)
 		}
 		if (line[p] == ';')
 			break;
-		/*»ñµÃµ¥´Ê£º³ıÁË´æÔÚÖĞÀ¨ºÅ½øĞĞÀ¨ºÅÆ¥ÅäÒÔÍâ£¬ÆäËû¾ùÎª¶Áµ½¿Õ¸ñÍ£Ö¹*/
+		/*è·å¾—å•è¯ï¼šé™¤äº†å­˜åœ¨ä¸­æ‹¬å·è¿›è¡Œæ‹¬å·åŒ¹é…ä»¥å¤–ï¼Œå…¶ä»–å‡ä¸ºè¯»åˆ°ç©ºæ ¼åœæ­¢*/
 		is_ins = 1;
 		std::string word;
 		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
@@ -497,7 +500,7 @@ void new_store(int op, std::string line, functions* num_func)
 		}
 		else if (!fRs_imm)
 		{
-			if (word[0] >= '0' && word[0] <= '9' || word[0] == '-')//´æÔÚÁ¢¼´Êı
+			if (word[0] >= '0' && word[0] <= '9' || word[0] == '-')//å­˜åœ¨ç«‹å³æ•°
 			{
 				new_store->fimm = 1;
 				if (new_store->tRs1 == 0)
@@ -505,7 +508,7 @@ void new_store(int op, std::string line, functions* num_func)
 				else
 					new_store->imm = floatToBinary(atof(word.c_str()));
 			}
-			else//·ÇÁ¢¼´Êı
+			else//éç«‹å³æ•°
 			{
 				new_store->fimm = 0;
 				if (map_global_register.count(word) != 0)
@@ -551,7 +554,7 @@ void new_GEP(int op, std::string line, functions* num_func)
 	printf(";%s\n", line.c_str());
 
 	instruction* new_gep = new instruction;
-	bool is_ins = 0, fRd = 0, fRs = 0;//±ê¼ÇÊÇ·ñÒÑ¾­ÕÒµ½ÁËÄ¿µÄ±äÁ¿£¬Ô´±äÁ¿
+	bool is_ins = 0, fRd = 0, fRs = 0;//æ ‡è®°æ˜¯å¦å·²ç»æ‰¾åˆ°äº†ç›®çš„å˜é‡ï¼Œæºå˜é‡
 	int len = line.length();
 	Register_virtual* new_register = new Register_virtual;
 	vector<int>size, size_gep;
@@ -564,7 +567,7 @@ void new_GEP(int op, std::string line, functions* num_func)
 		}
 		if (line[p] == ';')
 			break;
-		/*»ñµÃµ¥´Ê£º³ıÁË´æÔÚÖĞÀ¨ºÅ½øĞĞÀ¨ºÅÆ¥ÅäÒÔÍâ£¬ÆäËû¾ùÎª¶Áµ½¿Õ¸ñÍ£Ö¹*/
+		/*è·å¾—å•è¯ï¼šé™¤äº†å­˜åœ¨ä¸­æ‹¬å·è¿›è¡Œæ‹¬å·åŒ¹é…ä»¥å¤–ï¼Œå…¶ä»–å‡ä¸ºè¯»åˆ°ç©ºæ ¼åœæ­¢*/
 		is_ins = 1;
 		std::string word;
 		word.push_back(line[p]);
@@ -663,7 +666,7 @@ void new_operation(int op, std::string line, functions* num_func)
 
 	instruction* new_operation = new instruction;
 	Register_virtual* new_register = new Register_virtual;
-	bool is_ins = 0, fRd = 0, fRs1_imm = 0, fRs2_imm = 0, type = 0;//±ê¼ÇÊÇ·ñÒÑ¾­ÕÒµ½ÁËÄ¿µÄ±äÁ¿¼°Æätype£¬Ô´±äÁ¿(1/2)¼°Æätype
+	bool is_ins = 0, fRd = 0, fRs1_imm = 0, fRs2_imm = 0, type = 0;//æ ‡è®°æ˜¯å¦å·²ç»æ‰¾åˆ°äº†ç›®çš„å˜é‡åŠå…¶typeï¼Œæºå˜é‡(1/2)åŠå…¶type
 	int len = line.length();
 	if (op == 15)
 		fRs2_imm = 1;
@@ -676,7 +679,7 @@ void new_operation(int op, std::string line, functions* num_func)
 		}
 		if (line[p] == ';')
 			break;
-		/*»ñµÃµ¥´Ê£º³ıÁË´æÔÚÖĞÀ¨ºÅ½øĞĞÀ¨ºÅÆ¥ÅäÒÔÍâ£¬ÆäËû¾ùÎª¶Áµ½¿Õ¸ñÍ£Ö¹*/
+		/*è·å¾—å•è¯ï¼šé™¤äº†å­˜åœ¨ä¸­æ‹¬å·è¿›è¡Œæ‹¬å·åŒ¹é…ä»¥å¤–ï¼Œå…¶ä»–å‡ä¸ºè¯»åˆ°ç©ºæ ¼åœæ­¢*/
 		is_ins = 1;
 		std::string word;
 		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
@@ -684,8 +687,9 @@ void new_operation(int op, std::string line, functions* num_func)
 			word.push_back(line[p]);
 			p++;
 		}
-		if (word == "=" || word == "add" || word == "fadd" || word == "sub" || word == "fsub" 
+		if (word == "=" || word == "add" || word == "fadd" || word == "sub" || word == "fsub"
 			|| word == "mul" || word == "fmul" || word == "sdiv" || word == "fdiv"
+			|| word == "and" || word == "or" || word == "xor"
 			|| word == "srem" || word == "frem" || word == "fneg")
 			continue;
 		if (!fRd)
@@ -701,15 +705,15 @@ void new_operation(int op, std::string line, functions* num_func)
 		}
 		else if (!fRs1_imm)
 		{
-			if (word[0] >= '0' && word[0] <= '9' || word[0] == '-')//´æÔÚÁ¢¼´Êı
+			if (word[0] >= '0' && word[0] <= '9' || word[0] == '-')//å­˜åœ¨ç«‹å³æ•°
 			{
 				new_operation->fimm1 = 1;
-				if (new_operation->tRs1 == 0)
+				if (new_operation->tRs1 != float32)
 					new_operation->imm1 = atoi(word.c_str());
 				else
 					new_operation->imm1 = floatToBinary(atof(word.c_str()));
 			}
-			else//·ÇÁ¢¼´Êı
+			else//éç«‹å³æ•°
 			{
 				new_operation->fimm1 = 0;
 				if (map_global_register.count(word) != 0)
@@ -721,7 +725,7 @@ void new_operation(int op, std::string line, functions* num_func)
 		}
 		else if (!fRs2_imm)
 		{
-			if (word[0] >= '0' && word[0] <= '9' || word[0] == '-')//´æÔÚÁ¢¼´Êı
+			if (word[0] >= '0' && word[0] <= '9' || word[0] == '-')//å­˜åœ¨ç«‹å³æ•°
 			{
 				new_operation->fimm2 = 1;
 				if (new_operation->tRs2 == 0)
@@ -729,7 +733,7 @@ void new_operation(int op, std::string line, functions* num_func)
 				else
 					new_operation->imm2 = floatToBinary(atof(word.c_str()));
 			}
-			else//·ÇÁ¢¼´Êı
+			else//éç«‹å³æ•°
 			{
 				new_operation->fimm2 = 0;
 				if (map_global_register.count(word) != 0)
@@ -765,7 +769,7 @@ void new_xcmp(int op, std::string line, functions* num_func)
 
 	instruction* new_xcmp = new instruction;
 	Register_virtual* new_register = new Register_virtual;
-	bool is_ins = 0, fRd = 0, cond = 0, fRs1_imm = 0, fRs2_imm = 0, type = 0;//±ê¼ÇÊÇ·ñÒÑ¾­ÕÒµ½ÁËÄ¿µÄ±äÁ¿¼°Æätype£¬Ô´±äÁ¿(1/2)¼°Æätype
+	bool is_ins = 0, fRd = 0, cond = 0, fRs1_imm = 0, fRs2_imm = 0, type = 0;//æ ‡è®°æ˜¯å¦å·²ç»æ‰¾åˆ°äº†ç›®çš„å˜é‡åŠå…¶typeï¼Œæºå˜é‡(1/2)åŠå…¶type
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
@@ -776,7 +780,7 @@ void new_xcmp(int op, std::string line, functions* num_func)
 		}
 		if (line[p] == ';')
 			break;
-		/*»ñµÃµ¥´Ê£º³ıÁË´æÔÚÖĞÀ¨ºÅ½øĞĞÀ¨ºÅÆ¥ÅäÒÔÍâ£¬ÆäËû¾ùÎª¶Áµ½¿Õ¸ñÍ£Ö¹*/
+		/*è·å¾—å•è¯ï¼šé™¤äº†å­˜åœ¨ä¸­æ‹¬å·è¿›è¡Œæ‹¬å·åŒ¹é…ä»¥å¤–ï¼Œå…¶ä»–å‡ä¸ºè¯»åˆ°ç©ºæ ¼åœæ­¢*/
 		is_ins = 1;
 		std::string word;
 		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
@@ -804,15 +808,15 @@ void new_xcmp(int op, std::string line, functions* num_func)
 		}
 		else if (!fRs1_imm)
 		{
-			if (word[0] >= '0' && word[0] <= '9' || word[0] == '-')//´æÔÚÁ¢¼´Êı
+			if (word[0] >= '0' && word[0] <= '9' || word[0] == '-')//å­˜åœ¨ç«‹å³æ•°
 			{
 				new_xcmp->fimm1 = 1;
-				if (new_xcmp->tRs1 == 0)
+				if (new_xcmp->tRs1 != float32)
 					new_xcmp->imm1 = atoi(word.c_str());
 				else
 					new_xcmp->imm1 = floatToBinary(atof(word.c_str()));
 			}
-			else//·ÇÁ¢¼´Êı
+			else//éç«‹å³æ•°
 			{
 				new_xcmp->fimm1 = 0;
 				if (map_global_register.count(word) != 0)
@@ -824,7 +828,7 @@ void new_xcmp(int op, std::string line, functions* num_func)
 		}
 		else if (!fRs2_imm)
 		{
-			if ((word[0] >= '0' && word[0] <= '9') || word[0] == '-') //´æÔÚÁ¢¼´Êı
+			if ((word[0] >= '0' && word[0] <= '9') || word[0] == '-') //å­˜åœ¨ç«‹å³æ•°
 			{
 				new_xcmp->fimm2 = 1;
 				if (new_xcmp->tRs2 == 0)
@@ -832,7 +836,7 @@ void new_xcmp(int op, std::string line, functions* num_func)
 				else
 					new_xcmp->imm2 = floatToBinary(atof(word.c_str()));
 			}
-			else//·ÇÁ¢¼´Êı
+			else//éç«‹å³æ•°
 			{
 				new_xcmp->fimm2 = 0;
 				if (map_global_register.count(word) != 0)
@@ -867,7 +871,7 @@ void new_branch(int op, std::string line, functions* num_func)
 	printf(";%s\n", line.c_str());
 
 	instruction* new_branch = new instruction;
-	bool is_ins = 0, cond = 0, label1 = 0, label2 = 0;//±ê¼ÇÊÇ·ñÒÑ¾­ÕÒµ½ÁË×ªÒÆÌõ¼ş£¬ÎªÕæ×ªÒÆÄ¿µÄµØ£¬Îª¼Ù×ªÒÆÄ¿µÄµØ
+	bool is_ins = 0, cond = 0, label1 = 0, label2 = 0;//æ ‡è®°æ˜¯å¦å·²ç»æ‰¾åˆ°äº†è½¬ç§»æ¡ä»¶ï¼Œä¸ºçœŸè½¬ç§»ç›®çš„åœ°ï¼Œä¸ºå‡è½¬ç§»ç›®çš„åœ°
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
@@ -878,7 +882,7 @@ void new_branch(int op, std::string line, functions* num_func)
 		}
 		if (line[p] == ';')
 			break;
-		/*»ñµÃµ¥´Ê£º³ıÁË´æÔÚÖĞÀ¨ºÅ½øĞĞÀ¨ºÅÆ¥ÅäÒÔÍâ£¬ÆäËû¾ùÎª¶Áµ½¿Õ¸ñÍ£Ö¹*/
+		/*è·å¾—å•è¯ï¼šé™¤äº†å­˜åœ¨ä¸­æ‹¬å·è¿›è¡Œæ‹¬å·åŒ¹é…ä»¥å¤–ï¼Œå…¶ä»–å‡ä¸ºè¯»åˆ°ç©ºæ ¼åœæ­¢*/
 		is_ins = 1;
 		std::string word;
 		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
@@ -890,7 +894,7 @@ void new_branch(int op, std::string line, functions* num_func)
 			continue;
 		if (word == "i1")
 		{
-			new_branch->branch_flag = 1;//Ìõ¼şÌø×ª
+			new_branch->branch_flag = 1;//æ¡ä»¶è·³è½¬
 			continue;
 		}
 		if (word == "label")
@@ -937,11 +941,11 @@ void new_branch(int op, std::string line, functions* num_func)
 
 }
 
-/*»ñÈ¡callÖ¸ÁîµÄ²ÎÊıÁĞ±í*/
+/*è·å–callæŒ‡ä»¤çš„å‚æ•°åˆ—è¡¨*/
 void get_instruction_args(instruction* ins, std::string line, functions* num_func)
 {
 	int len = line.length();
-	bool last_type = 0;//µ±Ç°²ÎÊıÀàĞÍ
+	bool last_type = 0;//å½“å‰å‚æ•°ç±»å‹
 	for (int p = 0; p < len; )
 	{
 		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
@@ -955,17 +959,29 @@ void get_instruction_args(instruction* ins, std::string line, functions* num_fun
 			word.push_back(line[p]);
 			p++;
 		}
-		if (word == "i32" || word == "float")//ĞÂÔöÒ»¸ö²ÎÊı
+		if (word == "i32" || word == "float")//æ–°å¢ä¸€ä¸ªå‚æ•°
 		{
 			last_type = (word == "i32") ? 0 : 1;
 			ins->formal_type.push_back(last_type);
 			ins->tot_formal++;
 		}
-		else//²ÎÊıÃû,ĞÂÔöÒ»¸ö¾Ö²¿±äÁ¿
+		else//å‚æ•°å,æ–°å¢ä¸€ä¸ªå±€éƒ¨å˜é‡
 		{
-			if (map_global_register.count(word) != 0)
-				ins->formal_num.push_back(map_global_register[word]);
-			else ins->formal_num.push_back(num_func->map_local_register[word]);
+			if ((word[0] >= '0' && word[0] <= '9') || word[0] == '-')//å‚æ•°ä¸ºç«‹å³æ•°
+			{
+				ins->formal_is_imm.push_back(true);
+				if (last_type)//float
+					ins->formal_num.push_back(floatToBinary(atof(word.c_str())));
+				else//i32
+					ins->formal_num.push_back(atoi(word.c_str()));
+			}
+			else
+			{
+				ins->formal_is_imm.push_back(false);
+				if (map_global_register.count(word) != 0)
+					ins->formal_num.push_back(map_global_register[word]);
+				else ins->formal_num.push_back(num_func->map_local_register[word]);
+			}
 		}
 	}
 }
@@ -977,7 +993,7 @@ void new_call(int op, std::string line, functions* num_func)
 
 	instruction* new_call = new instruction;
 	Register_virtual* new_register = new Register_virtual;
-	bool is_ins = 0, fRd = 0, tRd = 0, name = 0;//±ê¼ÇÊÇ·ñÒÑ¾­ÕÒµ½ÁËÄ¿µÄ±äÁ¿¼°Æätype£¬±»µ÷º¯ÊıÃû
+	bool is_ins = 0, fRd = 0, tRd = 0, name = 0;//æ ‡è®°æ˜¯å¦å·²ç»æ‰¾åˆ°äº†ç›®çš„å˜é‡åŠå…¶typeï¼Œè¢«è°ƒå‡½æ•°å
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
@@ -988,7 +1004,7 @@ void new_call(int op, std::string line, functions* num_func)
 		}
 		if (line[p] == ';' || line[p] == '(')
 			break;
-		/*»ñµÃµ¥´Ê£º³ıÁË´æÔÚÖĞÀ¨ºÅ½øĞĞÀ¨ºÅÆ¥ÅäÒÔÍâ£¬ÆäËû¾ùÎª¶Áµ½¿Õ¸ñ»òÕß'('Í£Ö¹*/
+		/*è·å¾—å•è¯ï¼šé™¤äº†å­˜åœ¨ä¸­æ‹¬å·è¿›è¡Œæ‹¬å·åŒ¹é…ä»¥å¤–ï¼Œå…¶ä»–å‡ä¸ºè¯»åˆ°ç©ºæ ¼æˆ–è€…'('åœæ­¢*/
 		is_ins = 1;
 		std::string word;
 		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',' && line[p] != '(')
@@ -1000,7 +1016,7 @@ void new_call(int op, std::string line, functions* num_func)
 			continue;
 		if (!fRd)
 		{
-			if (word == "void")
+			if (word == "void" || word == "i32" || word == "float")
 			{
 				new_call->type_ret = 2;
 				tRd = 1;
@@ -1034,11 +1050,9 @@ void new_call(int op, std::string line, functions* num_func)
 			word.push_back(line[p]);
 			p++;
 		}
-		get_instruction_args(new_call, word, num_func);//»ñÈ¡²ÎÊıÁĞ±í
+		get_instruction_args(new_call, word, num_func);//è·å–å‚æ•°åˆ—è¡¨
 		break;
 	}
-	if (!is_ins)
-		return;
 	if (!is_ins)
 		return;
 	num_func->cnt_ins++;
@@ -1054,7 +1068,10 @@ void new_call(int op, std::string line, functions* num_func)
 	int nw = 0;
 	for (auto it : new_call->formal_num)
 	{
-		printf(";number=%d type=%d\n", it, (new_call->formal_type[nw]) ? 1 : 0);
+		if (new_call->formal_is_imm[nw])
+			printf(";imm=%d type=%d\n", it, (new_call->formal_type[nw]) ? 1 : 0);
+		else
+			printf(";number=%d type=%d\n", it, (new_call->formal_type[nw]) ? 1 : 0);
 		nw++;
 	}
 	printf("\n");
@@ -1067,7 +1084,7 @@ void new_ret(int op, std::string line, functions* num_func)
 	printf(";%s\n", line.c_str());
 
 	instruction* new_ret = new instruction;
-	bool is_ins = 0, type = 0, tRs = 0;//±ê¼ÇÊÇ·ñÒÑ¾­ÕÒµ½·µ»ØÀàĞÍ£¬Ô´±äÁ¿
+	bool is_ins = 0, type = 0, tRs = 0;//æ ‡è®°æ˜¯å¦å·²ç»æ‰¾åˆ°è¿”å›ç±»å‹ï¼Œæºå˜é‡
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
@@ -1078,7 +1095,7 @@ void new_ret(int op, std::string line, functions* num_func)
 		}
 		if (line[p] == ';')
 			break;
-		/*»ñµÃµ¥´Ê£ºÆäËû¾ùÎª¶Áµ½¿Õ¸ñÍ£Ö¹*/
+		/*è·å¾—å•è¯ï¼šå…¶ä»–å‡ä¸ºè¯»åˆ°ç©ºæ ¼åœæ­¢*/
 		is_ins = 1;
 		std::string word;
 		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
@@ -1126,7 +1143,7 @@ void new_ret(int op, std::string line, functions* num_func)
 void get_args(functions* new_function, std::string line)
 {
 	int len = line.length();
-	bool last_type = 0;//µ±Ç°²ÎÊıÀàĞÍ
+	bool last_type = 0;//å½“å‰å‚æ•°ç±»å‹
 	for (int p = 0; p < len; )
 	{
 		if (line[p] == ' ' || line[p] == ',')
@@ -1140,13 +1157,13 @@ void get_args(functions* new_function, std::string line)
 			word.push_back(line[p]);
 			p++;
 		}
-		if (word == "i32" || word == "float")//ĞÂÔöÒ»¸ö²ÎÊı
+		if (word == "i32" || word == "float")//æ–°å¢ä¸€ä¸ªå‚æ•°
 		{
 			new_function->total_formal++;
 			new_function->args.push_back((word == "i32") ? 0 : 1);
 			last_type = (word == "i32") ? 0 : 1;
 		}
-		else//²ÎÊıÃû,ĞÂÔöÒ»¸ö¾Ö²¿¼Ä´æÆ÷
+		else//å‚æ•°å,æ–°å¢ä¸€ä¸ªå±€éƒ¨å¯„å­˜å™¨
 		{
 			Register_virtual* new_register = new Register_virtual;
 			get_new_register(new_register, word, new_function);
@@ -1162,9 +1179,9 @@ functions* new_function(std::string line)
 
 	functions* new_function = new functions;
 	new_function->num = ++tot_functions;
-	bool type = 0, name = 0, args = 0;//±ê¼ÇÊÇ·ñÒÑ¾­ÕÒµ½ÁËº¯ÊıµÄtype£¬º¯ÊıÃûÒÔ¼°²ÎÊı
+	bool type = 0, name = 0, args = 0;//æ ‡è®°æ˜¯å¦å·²ç»æ‰¾åˆ°äº†å‡½æ•°çš„typeï¼Œå‡½æ•°åä»¥åŠå‚æ•°
 	int len = line.length();
-	/*ÏÈÕÒµ½³ı²ÎÊıÁĞ±íÒÔÍâµÄĞÅÏ¢*/
+	/*å…ˆæ‰¾åˆ°é™¤å‚æ•°åˆ—è¡¨ä»¥å¤–çš„ä¿¡æ¯*/
 	for (int p = 0; p < len; )
 	{
 		if (line[p] == ' ' || line[p] == ',')
@@ -1174,7 +1191,7 @@ functions* new_function(std::string line)
 		}
 		if (line[p] == ';' || line[p] == '(')
 			break;
-		/*»ñµÃµ¥´Ê£º³ıÁË´æÔÚĞ¡À¨ºÅ½øĞĞÀ¨ºÅÆ¥ÅäÒÔÍâ£¬ÆäËû¾ùÎª¶Áµ½¿Õ¸ñÍ£Ö¹*/
+		/*è·å¾—å•è¯ï¼šé™¤äº†å­˜åœ¨å°æ‹¬å·è¿›è¡Œæ‹¬å·åŒ¹é…ä»¥å¤–ï¼Œå…¶ä»–å‡ä¸ºè¯»åˆ°ç©ºæ ¼åœæ­¢*/
 		std::string word;
 		while (p<len && line[p] != ' ' && line[p] != ';' && line[p] != ',' && line[p] != '(')
 		{
@@ -1211,7 +1228,7 @@ functions* new_function(std::string line)
 			word.push_back(line[p]);
 			p++;
 		}
-		get_args(new_function, word);//»ñÈ¡²ÎÊıÁĞ±í
+		get_args(new_function, word);//è·å–å‚æ•°åˆ—è¡¨
 		break;
 	}
 	func_tail->next = new_function;
@@ -1233,7 +1250,7 @@ functions* new_function(std::string line)
 void end_function(functions* now_function)
 {
 	now_function->tot_arg = now_function->total_actual + now_function->total_formal;
-	//Îª¾Ö²¿±äÁ¿·ÖÅä¿Õ¼ä,Ö»Ğ´Æ«ÒÆÁ¿
+	//ä¸ºå±€éƒ¨å˜é‡åˆ†é…ç©ºé—´,åªå†™åç§»é‡
 	int imm = 16;
 	variable_table* head = now_function->local_head;
 	while (head->next != NULL)
@@ -1243,10 +1260,15 @@ void end_function(functions* now_function)
 		if(head->type==i64)
 			imm += (head->cnt << 2);
 		now_function->imm_local[head->num] = -imm;
-		
 	}
-	imm += (max(now_function->max_formal - 8, 0) + 1) << 2;//¼ÆËãÕ»Ö¡´óĞ¡,¶àÁôÁË4×Ö½Ú
+	imm += (max(now_function->max_formal - 8, 0) + 16) << 2;//è®¡ç®—æ ˆå¸§å¤§å°,å¤šç•™äº†24å­—èŠ‚
 	now_function->size = imm;
+	head = now_function->local_head;
+	while (head->next != NULL)
+	{
+		head = head->next;
+		now_function->imm_local[head->num] += imm;
+	}
 
 	printf(";size=%d formal_num=%d max_num=%d\n", now_function->size, now_function->total_formal, now_function->max_formal);
 	head = now_function->local_head;
@@ -1344,7 +1366,7 @@ void new_xtoy(int op,std::string line, functions* num_func)
 
 	instruction* new_xtoy = new instruction;
 	Register_virtual* new_register = new Register_virtual;
-	bool is_ins = 0, fRd = 0, tRd = 0, fRs_imm = 0, tRs_imm = 0;//±ê¼ÇÊÇ·ñÒÑ¾­ÕÒµ½ÁËÄ¿µÄ±äÁ¿¼°Æätype£¬Ô´±äÁ¿¼°Æätype
+	bool is_ins = 0, fRd = 0, tRd = 0, fRs_imm = 0, tRs_imm = 0;//æ ‡è®°æ˜¯å¦å·²ç»æ‰¾åˆ°äº†ç›®çš„å˜é‡åŠå…¶typeï¼Œæºå˜é‡åŠå…¶type
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
@@ -1355,7 +1377,7 @@ void new_xtoy(int op,std::string line, functions* num_func)
 		}
 		if (line[p] == ';')
 			break;
-		/*»ñµÃµ¥´Ê£º³ıÁË´æÔÚÖĞÀ¨ºÅ½øĞĞÀ¨ºÅÆ¥ÅäÒÔÍâ£¬ÆäËû¾ùÎª¶Áµ½¿Õ¸ñÍ£Ö¹*/
+		/*è·å¾—å•è¯ï¼šé™¤äº†å­˜åœ¨ä¸­æ‹¬å·è¿›è¡Œæ‹¬å·åŒ¹é…ä»¥å¤–ï¼Œå…¶ä»–å‡ä¸ºè¯»åˆ°ç©ºæ ¼åœæ­¢*/
 		is_ins = 1;
 		std::string word;
 		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
@@ -1378,15 +1400,15 @@ void new_xtoy(int op,std::string line, functions* num_func)
 		}
 		else if (!fRs_imm)
 		{
-			if (word[0] >= '0' && word[0] <= '9' || word[0] == '-')//´æÔÚÁ¢¼´Êı
+			if (word[0] >= '0' && word[0] <= '9' || word[0] == '-')//å­˜åœ¨ç«‹å³æ•°
 			{
 				new_xtoy->fimm1 = 1;
-				if (new_xtoy->tRs1 == 0)
+				if (new_xtoy->tRs1 != float32)
 					new_xtoy->imm1 = atoi(word.c_str());
 				else
 					new_xtoy->imm1 = floatToBinary(atof(word.c_str()));
 			}
-			else//·ÇÁ¢¼´Êı
+			else//éç«‹å³æ•°
 			{
 				new_xtoy->fimm1 = 0;
 				if (map_global_register.count(word) != 0)
@@ -1417,137 +1439,244 @@ void new_xtoy(int op,std::string line, functions* num_func)
 	printf("\n");
 }
 
-void read(int option, std::string line, functions* num_func, bool in_func)//¶ÁÈë
+void new_zext(int op, std::string line, functions* num_func)
+{
+
+	printf(";%s\n", line.c_str());
+
+	instruction* new_zext = new instruction;
+	Register_virtual* new_register = new Register_virtual;
+	bool is_ins = 0, fRd = 0, tRd = 0, fRs_imm = 0, tRs_imm = 0;//æ ‡è®°æ˜¯å¦å·²ç»æ‰¾åˆ°äº†ç›®çš„å˜é‡åŠå…¶typeï¼Œæºå˜é‡åŠå…¶type
+	int len = line.length();
+	for (int p = 0; p < len; )
+	{
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
+		{
+			p++;
+			continue;
+		}
+		if (line[p] == ';')
+			break;
+		/*è·å¾—å•è¯ï¼šé™¤äº†å­˜åœ¨ä¸­æ‹¬å·è¿›è¡Œæ‹¬å·åŒ¹é…ä»¥å¤–ï¼Œå…¶ä»–å‡ä¸ºè¯»åˆ°ç©ºæ ¼åœæ­¢*/
+		is_ins = 1;
+		std::string word;
+		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
+		{
+			word.push_back(line[p]);
+			p++;
+		}
+		if (word == "=" || word == "zext" || word == "to")
+			continue;
+		if (!fRd)
+		{
+			get_new_register(new_register, word, num_func);
+			new_zext->Rd = new_register->num;
+			fRd = 1;
+		}
+		else if (!tRs_imm)
+		{
+			new_zext->tRs1 = ((word == "i32") ? 0 : ((word == "float") ? 1 : 2));
+			tRs_imm = 1;
+		}
+		else if (!fRs_imm)
+		{
+			if ((word[0] >= '0' && word[0] <= '9') || word[0] == '-')
+			{
+				new_zext->fimm1 = 1;
+				if (new_zext->tRs1 != float32)
+					new_zext->imm1 = atoi(word.c_str());
+				else
+					new_zext->imm1 = floatToBinary(atof(word.c_str()));
+
+			}
+			else
+			{
+				new_zext->fimm1 = 0;
+				if (map_global_register.count(word) != 0)
+					new_zext->Rs1 = map_global_register[word];
+				else
+					new_zext->Rs1 = num_func->map_local_register[word];
+			}
+			fRs_imm = 1;
+		}
+		else if (!tRd)
+		{
+			new_zext->tRd = ((word == "i32") ? 0 : ((word == "float") ? 1 : 2));
+			new_register->type = new_zext->tRd;
+			tRd = 1;
+		}
+	}
+	if (!is_ins)
+		return;
+	num_func->cnt_ins++;
+	new_zext->num = ++tot_instructions;
+	new_zext->op = op;
+	insert_instruction(num_func, new_zext);
+
+	printf(";Rd=%d type=%d ", new_zext->Rd, new_zext->tRd);
+	if (new_zext->fimm)
+	{
+		printf("imm=%u type=%d", new_zext->imm, new_zext->tRs1);
+	}
+	else
+	{
+		printf("Rs=%d type=%d", new_zext->Rs1, new_zext->tRs1);
+	}
+	printf("\n\n");
+
+}
+
+void read(int option, std::string line, functions* num_func, bool in_func)//è¯»å…¥
 {
 	switch (option)
 	{
-		case 0://globalÓï¾ä
+		case ins_global://globalè¯­å¥
 		{
-			new_variable(0, line, global_tail);//ĞÂ½¨Ò»¸öÈ«¾Ö±äÁ¿
+			new_variable(0, line);//æ–°å»ºä¸€ä¸ªå…¨å±€å˜é‡
 			break;
 		}
-		case 1://loadÓï¾ä
+		case ins_load://loadè¯­å¥
 		{
 			new_load(option, line, num_func);
 			break;
 		}
-		case 2://storeÓï¾ä
+		case ins_store://storeè¯­å¥
 		{
 			new_store(option, line, num_func);
 			break;
 		}
-		case 3://allocaÓï¾ä
+		case ins_alloca://allocaè¯­å¥
 		{
-			new_variable(1, line, num_func->local_tail, num_func);
+			new_variable(1, line, num_func);
 			break;
 		}
-		case 4://GEPÓï¾ä
+		case ins_getelementptr://GEPè¯­å¥
 		{
 			new_GEP(option, line, num_func);
 			break;
 		}
-		case 5://addÓï¾ä
+		case ins_add://addè¯­å¥
 		{
 			new_operation(option, line, num_func);
 			break;
 		}
-		case 6://faddÓï¾ä
+		case ins_fadd://faddè¯­å¥
 		{
 			new_operation(option, line, num_func);
 			break;
 		}
-		case 7://subÓï¾ä
+		case ins_sub://subè¯­å¥
 		{
 			new_operation(option, line, num_func);
 			break;
 		}
-		case 8://fsubÓï¾ä
+		case ins_fsub://fsubè¯­å¥
 		{
 			new_operation(option, line, num_func);
 			break;
 		}
-		case 9://mulÓï¾ä
+		case ins_mul://mulè¯­å¥
 		{
 			new_operation(option, line, num_func);
 			break;
 		}
-		case 10://fmulÓï¾ä
+		case ins_fmul://fmulè¯­å¥
 		{
 			new_operation(option, line, num_func);
 			break;
 		}
-		case 11://sdivÓï¾ä
+		case ins_sdiv://sdivè¯­å¥
 		{
 			new_operation(option, line, num_func);
 			break;
 		}
-		case 12://fdivÓï¾ä
+		case ins_fdiv://fdivè¯­å¥
 		{
 			new_operation(option, line, num_func);
 			break;
 		
 		}
-		case 13://sremÓï¾ä
+		case ins_srem://sremè¯­å¥
 		{
 			new_operation(option, line, num_func);
 			break;
 		}
-		case 14://fremÓï¾ä
+		case ins_frem://fremè¯­å¥
 		{
 			new_operation(option, line, num_func);
 			break;
 		}
-		case 15://fnegÓï¾ä
+		case ins_and://andè¯­å¥
 		{
 			new_operation(option, line, num_func);
 			break;
 		}
-		case 16://icmpÓï¾ä
+		case ins_or://orè¯­å¥
+		{
+			new_operation(option, line, num_func);
+			break;
+		}
+		case ins_xor://xorè¯­å¥
+		{
+			new_operation(option, line, num_func);
+			break;
+		}
+		case ins_fneg://fnegè¯­å¥
+		{
+			new_operation(option, line, num_func);
+			break;
+		}
+		case ins_icmp://icmpè¯­å¥
 		{
 			new_xcmp(option, line, num_func);
 			break;
 		}
-		case 17://fcmpÓï¾ä
+		case ins_fcmp://fcmpè¯­å¥
 		{
 			new_xcmp(option, line, num_func);
 			break;
 		}
-		case 18://brÓï¾ä
+		case ins_br://brè¯­å¥
 		{
 			new_branch(option, line, num_func);
 			break;
 		}
-		case 19:
+		case ins_define:
 		{
 			break;
 		}
-		case 20://callÓï¾ä
+		case ins_call://callè¯­å¥
 		{
 			new_call(option, line, num_func);
 			break;
 		}
-		case 21://retÓï¾ä
+		case ins_ret://retè¯­å¥
 		{
 			new_ret(option, line, num_func);
 			break;
 		}
-		case 22:
+		case ins_label:
 		{
 			break;
 		}
-		case 23://unreachableÓï¾ä
+		case ins_unreachable://unreachableè¯­å¥
 		{
 			new_unreachable(option, line, num_func);
 			break;
 		}
-		case 24://sitofpÓï¾ä
+		case ins_sitofp://sitofpè¯­å¥
 		{
 			new_xtoy(option, line, num_func);
 			break;
 		}
-		case 25://fptosiÓï¾ä
+		case ins_fptosi://fptosiè¯­å¥
 		{
 			new_xtoy(option, line, num_func);
+			break;
+		}
+		case ins_zext://zextè¯­å¥
+		{
+			new_zext(option, line, num_func);
 			break;
 		}
 	}
