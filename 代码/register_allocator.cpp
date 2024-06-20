@@ -1,16 +1,17 @@
 #include "riscv.h"
 
 extern Register_physical reg[2][num_registers];
-extern map<int, Register_virtual*>map_global_register_position;//È«¾Ö¼Ä´æÆ÷±àºÅµ½Ö¸ÕëµÄÓ³Éä
-extern map<int, Register_virtual*>map_local_register_position;//¾Ö²¿ĞéÄâ¼Ä´æÆ÷±àºÅµ½Ö¸ÕëµÄÓ³Éä
-extern map<int, int>map_register_local;//¼Ä´æÆ÷±àºÅµ½±äÁ¿±àºÅµÄÓ³Éä
-extern set<int>ins_definied;//»á¶¨ÒåĞéÄâ¼Ä´æÆ÷µÄÖ¸Áî(³ıcall)
-extern set<int>ins_used;//»áÊ¹ÓÃĞéÄâ¼Ä´æÆ÷µÄÖ¸Áî
-extern vector<bool>physical_reg_usable[2];//ÎïÀí¼Ä´æÆ÷ÄÜ·ñÊ¹ÓÃ
-extern vector<int>physical_reg_order[2];//¿¼ÂÇ·ÖÅäÎïÀí¼Ä´æÆ÷µÄË³Ğò
-extern map<int, instruction*>map_instruction_position;//Ö¸Áî±àºÅµ½Ö¸ÕëµÄÓ³Éä
-extern set<int>ins_valuate;//»á¶ÔRd¸³ÖµµÄÖ¸Áî
-extern map<int, pair<int, int> >map_ins_copy;//¼ÇÂ¼copyÖ¸ÁîµÄÎ»ÖÃ
+extern map<int, Register_virtual*>map_global_register_position;//å…¨å±€å¯„å­˜å™¨ç¼–å·åˆ°æŒ‡é’ˆçš„æ˜ å°„
+extern map<int, Register_virtual*>map_local_register_position;//å±€éƒ¨è™šæ‹Ÿå¯„å­˜å™¨ç¼–å·åˆ°æŒ‡é’ˆçš„æ˜ å°„
+extern map<int, int>map_register_local;//å¯„å­˜å™¨ç¼–å·åˆ°å˜é‡ç¼–å·çš„æ˜ å°„
+extern set<int>ins_definied;//ä¼šå®šä¹‰è™šæ‹Ÿå¯„å­˜å™¨çš„æŒ‡ä»¤(é™¤call)
+extern set<int>ins_used;//ä¼šä½¿ç”¨è™šæ‹Ÿå¯„å­˜å™¨çš„æŒ‡ä»¤
+extern vector<bool>physical_reg_usable[2];//ç‰©ç†å¯„å­˜å™¨èƒ½å¦ä½¿ç”¨
+extern vector<int>physical_reg_order[2];//è€ƒè™‘åˆ†é…ç‰©ç†å¯„å­˜å™¨çš„é¡ºåº
+extern vector<int>physical_reg_saved[2];//special,caller_saved,callee_saved
+extern map<int, instruction*>map_instruction_position;//æŒ‡ä»¤ç¼–å·åˆ°æŒ‡é’ˆçš„æ˜ å°„
+extern set<int>ins_valuate;//ä¼šå¯¹Rdèµ‹å€¼çš„æŒ‡ä»¤
+extern map<int, pair<int, int> >map_ins_copy;//è®°å½•copyæŒ‡ä»¤çš„ä½ç½®
 priority_queue<pair<type_spliting_weight, type_registers> >allocate_queue;
 struct cmp_set
 {
@@ -21,7 +22,7 @@ struct cmp_set
 		return (reg_x->spliting_weight < reg_y->spliting_weight) ? true : false;
 	}
 };
-set<int, cmp_set>allocated_reg;//´æ´¢ÒÑ¾­·ÖÅäºÃµÄ¼Ä´æÆ÷
+set<int, cmp_set>allocated_reg;//å­˜å‚¨å·²ç»åˆ†é…å¥½çš„å¯„å­˜å™¨
 
 void allocate_clear()
 {
@@ -30,6 +31,9 @@ void allocate_clear()
 		reg[0][i].occupied.clear();
 		reg[1][i].occupied.clear();
 	}
+	while (allocate_queue.size())
+		allocate_queue.pop();
+	allocated_reg.clear();
 }
 
 bool cmp_reg(pair<int,int>a, pair<int,int>b)
@@ -82,19 +86,19 @@ type_spliting_weight calc_spliting_weight(Register_virtual* now_reg,int reg_num,
 	for (auto it : now_reg->live_interval)
 	{
 		int l = it.first, r = it.second;
-		/*ÕÒµ½Ê¹ÓÃÁË¸Ã¼Ä´æÆ÷µÄbb*/
+		/*æ‰¾åˆ°ä½¿ç”¨äº†è¯¥å¯„å­˜å™¨çš„bb*/
 		while (bb_head->next != NULL && bb_head->r < l)
 			bb_head = bb_head->next;
 		if (bb_head->next == NULL)
 			return value;
 		while (bb_head->next != NULL && bb_head->l <= r)
 		{
-			/*±éÀúÖ¸Áî*/
+			/*éå†æŒ‡ä»¤*/
 			instruction* ins_head = bb_head->ins_head;
 			type_spliting_weight delta = 0;
 			while (ins_head != NULL)
 			{
-				delta += count_use_reg(ins_head, reg_num);//Ê¹ÓÃµ±Ç°¼Ä´æÆ÷µÄ´ÎÊı
+				delta += count_use_reg(ins_head, reg_num);//ä½¿ç”¨å½“å‰å¯„å­˜å™¨çš„æ¬¡æ•°
 				ins_head = ins_head->next;
 			}
 			if (bb_head->is_loop)
@@ -104,8 +108,8 @@ type_spliting_weight calc_spliting_weight(Register_virtual* now_reg,int reg_num,
 			bb_head = bb_head->next;
 		}
 	}
-	if (value < history_max)//ÅĞ¶ÏÒç³ö
-		value = LLONG_MAX;//ÉèÎª×î´óÖµ
+	if (value < history_max)//åˆ¤æ–­æº¢å‡º
+		value = LLONG_MAX;//è®¾ä¸ºæœ€å¤§å€¼
 	return value;
 }
 
@@ -124,7 +128,7 @@ bool check_ins(int num_ins, int op, int num_physical_reg, functions* now_func,
 	int num_virtual_reg = 0)
 {
 	instruction* now_ins = map_instruction_position[num_ins];
-	/*ÅĞ¶ÏÊÇ·ñÎªRd¸³Öµ*/
+	/*åˆ¤æ–­æ˜¯å¦ä¸ºRdèµ‹å€¼*/
 	if (ins_valuate.find(now_ins->op) != ins_valuate.end() || (now_ins->op == ins_call && now_ins->type_ret != 2))
 	{
 		if (op)
@@ -147,7 +151,7 @@ bool intersect(Register_virtual* now_reg, vector<pair<int, int> >reg_interval,
 {
 	vector<pair<int, int> >::iterator reg_it = reg_interval.begin();
 	int l2, r2;
-	if (reg_it == reg_interval.end())//Õ¼ÓÃÇø¼äÎª¿Õ
+	if (reg_it == reg_interval.end())//å ç”¨åŒºé—´ä¸ºç©º
 		return false;
 	l2 = (*reg_it).first; r2 = (*reg_it).second;
 	for (auto it : now_reg->live_interval)
@@ -167,18 +171,19 @@ bool intersect(Register_virtual* now_reg, vector<pair<int, int> >reg_interval,
 		if (r2 > l1 || l2 < r1)
 			return true;
 		if (r2 == l1)
-			if (!check_ins(l1, 0, num_physical_reg, now_func, now_reg->num))//Èô²»Îªnow_reg¸³Öµ£¬Ôò²»¿ÉÒÔ·ÖÅä
+			if (!check_ins(l1, 0, num_physical_reg, now_func, now_reg->num))//è‹¥ä¸ä¸ºnow_regèµ‹å€¼ï¼Œåˆ™ä¸å¯ä»¥åˆ†é…
 				return true;
 		if (l2 == r1)
-			if (!check_ins(l2, 1, num_physical_reg, now_func))//ÈôÎ´¶ÔÎïÀí¼Ä´æÆ÷¸³Öµ,Ôò²»¿ÉÒÔ·ÖÅä
+			if (!check_ins(l2, 1, num_physical_reg, now_func))//è‹¥æœªå¯¹ç‰©ç†å¯„å­˜å™¨èµ‹å€¼,åˆ™ä¸å¯ä»¥åˆ†é…
 				return true;
 	}
 	return false;
 }
 
-/*·ÖÅäÎïÀí¼Ä´æÆ÷*/
+/*åˆ†é…ç‰©ç†å¯„å­˜å™¨*/
 void allocate(Register_virtual* now_reg, Register_physical& physical_reg, int num_reg)
 {
+	now_reg->is_allocated = true;
 	now_reg->reg_phisical = num_reg;
 	for (auto it : now_reg->live_interval)
 		physical_reg.occupied.push_back({ it.first,it.second });
@@ -186,17 +191,17 @@ void allocate(Register_virtual* now_reg, Register_physical& physical_reg, int nu
 	allocated_reg.insert(now_reg->num);
 }
 
-/*³¢ÊÔ·ÖÅä¼Ä´æÆ÷*/
+/*å°è¯•åˆ†é…å¯„å­˜å™¨*/
 bool try_assign(Register_virtual* now_reg, functions* now_func)
 {
-	int op = (now_reg->type) ? 1 : 0;
+	int op = (now_reg->type == float32) ? 1 : 0;
 	for (auto it : physical_reg_order[op])
 	{
 		if (physical_reg_usable[op][it] == false)
 			continue;
 		if (intersect(now_reg, reg[op][it].occupied, op * num_registers + it, now_func))
 			continue;
-		/*¿ÉÒÔ·ÖÅä¼Ä´æÆ÷*/
+		/*å¯ä»¥åˆ†é…å¯„å­˜å™¨*/
 		allocate(now_reg, reg[op][it], op * num_registers + it);
 		return true;
 	}
@@ -230,10 +235,10 @@ vector<pair<int, int> >get_new_interval(Register_virtual* now_reg,
 	return ret_interval;
 }
 
-/*³¢ÊÔµ¯³öÒ»¸öspliting weight½ÏĞ¡µÄ¼Ä´æÆ÷*/
+/*å°è¯•å¼¹å‡ºä¸€ä¸ªspliting weightè¾ƒå°çš„å¯„å­˜å™¨*/
 bool try_evction(Register_virtual* now_reg, functions* now_func)
 {
-	int op = (now_reg->type) ? 1 : 0;
+	int op = (now_reg->type == float32) ? 1 : 0;
 	for (auto it : allocated_reg)
 	{
 		Register_virtual* it_reg = map_local_register_position[it];
@@ -254,7 +259,7 @@ bool try_evction(Register_virtual* now_reg, functions* now_func)
 	return false;
 }
 
-/*½«Ò»¸öĞéÄâ¼Ä´æÆ÷²ğ·ÖÎªÁ½¸ö*/
+/*å°†ä¸€ä¸ªè™šæ‹Ÿå¯„å­˜å™¨æ‹†åˆ†ä¸ºä¸¤ä¸ª*/
 bool get_splited_reg(Register_virtual* now_reg, vector<pair<int, int> >reg_interval,
 	int num_physical_reg, functions* now_func, Register_virtual* ret_reg_first,
 	Register_virtual* ret_reg_second)
@@ -280,7 +285,7 @@ bool get_splited_reg(Register_virtual* now_reg, vector<pair<int, int> >reg_inter
 		else
 		{
 			int l = max(l1, l2), r = min(r1, r2);
-			if (l > r)//½»¼¯Îª¿Õ
+			if (l > r)//äº¤é›†ä¸ºç©º
 				ret_reg_first->live_interval.push_back({ l1,r1 });
 			else
 			{
@@ -295,7 +300,7 @@ bool get_splited_reg(Register_virtual* now_reg, vector<pair<int, int> >reg_inter
 						r--;
 				}
 				if (l <= r)
-				ret_reg_second->live_interval.push_back({ l,r });//Çø¼ä½»¸øµÚ¶ş¸ö¼Ä´æÆ÷
+				ret_reg_second->live_interval.push_back({ l,r });//åŒºé—´äº¤ç»™ç¬¬äºŒä¸ªå¯„å­˜å™¨
 				if (l1 <= l - 1)
 					ret_reg_first->live_interval.push_back({ l1,l - 1 });
 				if (r + 1 <= r1)
@@ -314,7 +319,7 @@ bool get_splited_reg(Register_virtual* now_reg, vector<pair<int, int> >reg_inter
 	return true;
 }
 
-/*¼ÓÈëµ½¼Ä´æÆ÷ÁĞ±í*/
+/*åŠ å…¥åˆ°å¯„å­˜å™¨åˆ—è¡¨*/
 void add_new_register(Register_virtual* new_register, Register_virtual* now_register,
 	functions* now_func, int append)
 {
@@ -325,12 +330,14 @@ void add_new_register(Register_virtual* new_register, Register_virtual* now_regi
 	new_register->is_splited_from = now_register->num;
 	now_func->map_local_register_position[new_register->num] = new_register;
 	map_local_register_position[new_register->num] = new_register;
+	if (map_register_local_alloca.count(now_register->num) != 0)
+		map_register_local_alloca[new_register->num] = map_register_local_alloca[now_register->num];
 	now_func->reg_tail->next = new_register;
 	now_func->reg_tail = new_register;
 	allocate_queue.push({ new_register->prod,new_register->num });
 }
 
-/*Ìæ»»Ö¸ÁîÏà¹ØµÄ¼Ä´æÆ÷*/
+/*æ›¿æ¢æŒ‡ä»¤ç›¸å…³çš„å¯„å­˜å™¨*/
 void change_instruction(Register_virtual* now_register, Register_virtual* new_register,
 	functions* now_func)
 {
@@ -365,7 +372,19 @@ void change_instruction(Register_virtual* now_register, Register_virtual* new_re
 	}
 }
 
-/*½«ĞèÒª²åÈëµÄcopyÖ¸Áî²åÔÚ¶ÔÓ¦Ö¸ÁîÖ®ºó*/
+void get_copy_ins(instruction* now_ins, int num_reg_first, int num_reg_second)
+{
+	instruction* new_ins = new instruction;
+	new_ins->num = ++tot_instructions;
+	new_ins->op = ins_copy;
+	new_ins->Rd = num_reg_first;
+	new_ins->Rs1 = num_reg_second;
+	new_ins->tRd = new_ins->tRs1 = i64;
+	new_ins->next = now_ins->next;
+	now_ins->next = new_ins;
+}
+
+/*å°†éœ€è¦æ’å…¥çš„copyæŒ‡ä»¤æ’åœ¨å¯¹åº”æŒ‡ä»¤ä¹‹å*/
 void add_copy_ins(Register_virtual* new_reg_first, Register_virtual* new_reg_second)
 {
 	vector<pair<int, int> >::iterator reg_it = new_reg_first->live_interval.begin();
@@ -387,18 +406,26 @@ void add_copy_ins(Register_virtual* new_reg_first, Register_virtual* new_reg_sec
 		if (reg_it == new_reg_first->live_interval.end())
 			return;
 		if (r1 == l2 - 1)//reg2 = copy reg1
+		{
 			map_ins_copy[r1] = { new_reg_second->num,new_reg_first->num };
+			get_copy_ins(map_instruction_position[r1], new_reg_second->num,
+				new_reg_first->num);
+		}
 		if (l1 == r2 + 1)//reg1 = copy reg2
+		{
 			map_ins_copy[r2] = { new_reg_first->num,new_reg_second->num };
+			get_copy_ins(map_instruction_position[r2], new_reg_first->num,
+				new_reg_second->num);
+		}
 	}
 }
 
-/*³¢ÊÔsplit*/
+/*å°è¯•split*/
 bool try_split(Register_virtual* now_reg, functions* now_func)
 {
 	if(now_reg->is_splited)
 		return false;
-	int op = (now_reg->type) ? 1 : 0;
+	int op = (now_reg->type == float32) ? 1 : 0;
 	Register_virtual* new_reg_first = NULL, * new_reg_second = NULL;
 	type_spliting_weight mn_value = ULLONG_MAX;
 	bool can_be_splited = false;
@@ -407,7 +434,7 @@ bool try_split(Register_virtual* now_reg, functions* now_func)
 		if (physical_reg_usable[op][it] == false)
 			continue;
 		Register_virtual* ret_reg_first = new Register_virtual, * ret_reg_second = new Register_virtual;
-		/*»®·Ö³öÁ½¸ösplited regs*/
+		/*åˆ’åˆ†å‡ºä¸¤ä¸ªsplited regs*/
 		if (get_splited_reg(now_reg, reg[op][it].occupied, op * num_registers + it, now_func, ret_reg_first, ret_reg_second))
 		{
 			can_be_splited = true;
@@ -421,11 +448,11 @@ bool try_split(Register_virtual* now_reg, functions* now_func)
 			}
 		}
 	}
-	/*Ñ¡Ôñsplit·½°¸*/
-	/*¼Ì³ĞÔ­ĞéÄâ¼Ä´æÆ÷µÄÀàĞÍ*/
+	/*é€‰æ‹©splitæ–¹æ¡ˆ*/
+	/*ç»§æ‰¿åŸè™šæ‹Ÿå¯„å­˜å™¨çš„ç±»å‹*/
 	if (new_reg_first == NULL)
 		return false;
-	/*¼ÓÈë¼Ä´æÆ÷ÁĞ±í*/
+	/*åŠ å…¥å¯„å­˜å™¨åˆ—è¡¨*/
 	add_new_register(new_reg_first, now_reg, now_func, 0);
 	add_new_register(new_reg_second, now_reg, now_func, 1);
 	change_instruction(now_reg, new_reg_first, now_func);
@@ -434,11 +461,11 @@ bool try_split(Register_virtual* now_reg, functions* now_func)
 	return can_be_splited;
 }
 
-/*±ê¼Ç¼Ä´æÆ÷Îªspilled,ÎªÆä·ÖÅäÒ»¸ö¿Õ¼ä*/
+/*æ ‡è®°å¯„å­˜å™¨ä¸ºspilled,ä¸ºå…¶åˆ†é…ä¸€ä¸ªç©ºé—´*/
 void spilled(Register_virtual* reg_head, functions* now_func)
 {
 	reg_head->is_spilled = true;
-	/*ĞÂ½¨Ò»¸ö±äÁ¿*/
+	/*æ–°å»ºä¸€ä¸ªå˜é‡*/
 	variable_table* new_variable = new variable_table;
 	new_variable->name = reg_head->name;
 	new_variable->cnt = 1;
@@ -447,6 +474,22 @@ void spilled(Register_virtual* reg_head, functions* now_func)
 	new_variable->type = i64;
 	new_variable->num_reg = reg_head->num;
 	map_register_local[reg_head->num] = new_variable->num;
+	map_variable_position[new_variable->num] = new_variable;
+	now_func->local_tail->next = new_variable;
+	now_func->local_tail = new_variable;
+}
+
+/*ä¸ºç”¨åˆ°çš„ç‰©ç†å¯„å­˜å™¨åˆ†é…ç©ºé—´*/
+void allocate_physical_reg(int physical_reg_num, functions* now_func)
+{
+	variable_table* new_variable = new variable_table;
+	new_variable->name = "p" + std::to_string(physical_reg_num);
+	new_variable->cnt = 1;
+	new_variable->dim = 0;
+	new_variable->num = ++total_global;
+	new_variable->type = i64;
+	new_variable->num_reg = 0;
+	now_func->map_physical_register_local[physical_reg_num] = total_global;
 	now_func->local_tail->next = new_variable;
 	now_func->local_tail = new_variable;
 }
@@ -454,23 +497,23 @@ void spilled(Register_virtual* reg_head, functions* now_func)
 void register_allocate(functions* now_func)
 {
 	allocate_clear();
-	/*Ê×ÏÈ¶ÔÃ¿¸ö¼Ä´æÆ÷¼ÆËãspilting weight*/
+	/*é¦–å…ˆå¯¹æ¯ä¸ªå¯„å­˜å™¨è®¡ç®—spilting weight*/
 	Register_virtual* reg_head = now_func->reg_head;
 	while (reg_head->next != NULL)
 	{
 		reg_head = reg_head->next;
 		reg_head->spliting_weight = calc_spliting_weight(reg_head, reg_head->num, now_func);
 	}
-	/*¼ÆËãÃ¿¸ö¼Ä´æÆ÷µÄÓÅÏÈ¼¶*/
+	/*è®¡ç®—æ¯ä¸ªå¯„å­˜å™¨çš„ä¼˜å…ˆçº§*/
 	reg_head = now_func->reg_head;
 	while (reg_head->next != NULL)
 	{
 		reg_head = reg_head->next;
 		reg_head->prod = calc_prod(reg_head, now_func);
 	}
-	/*¹¹½¨ÓÅÏÈ¶ÓÁĞ*/
+	/*æ„å»ºä¼˜å…ˆé˜Ÿåˆ—*/
 	reg_head = now_func->reg_head;
-	while (reg_head->next != NULL)//½«¼Ä´æÆ÷²åÈëÓÅÏÈ¶ÓÁĞ
+	while (reg_head->next != NULL)//å°†å¯„å­˜å™¨æ’å…¥ä¼˜å…ˆé˜Ÿåˆ—
 	{
 		reg_head = reg_head->next;
 		allocate_queue.push({ reg_head->prod,reg_head->num });
@@ -482,17 +525,45 @@ void register_allocate(functions* now_func)
 		//else
 		reg_head = map_local_register_position[allocate_queue.top().second];
 		allocate_queue.pop();
-		/*Ê×´Î³¢ÊÔ·ÖÅä*/
+		/*é¦–æ¬¡å°è¯•åˆ†é…*/
 		if (try_assign(reg_head, now_func))
 			continue;
-		/*Ê×´Î·ÖÅäÊ§°Ü£¬ÄÃ³öÒ»¸öspliting weight¸üĞ¡µÄ¼Ä´æÆ÷*/
+		/*é¦–æ¬¡åˆ†é…å¤±è´¥ï¼Œæ‹¿å‡ºä¸€ä¸ªspliting weightæ›´å°çš„å¯„å­˜å™¨*/
 		if (try_evction(reg_head, now_func))
 			continue;
-		/*Èô²»ÊÇsplited£¬Ôòsplit£¬ÖØĞÂ·Å»ØÓÅÏÈ¶ÓÁĞ*/
+		/*è‹¥ä¸æ˜¯splitedï¼Œåˆ™splitï¼Œé‡æ–°æ”¾å›ä¼˜å…ˆé˜Ÿåˆ—*/
 		if (try_split(reg_head, now_func))
 			continue;
-		/*Èôsplited£¬±ê¼ÇÎªspilled£¬²»µ¥¶À·ÖÅä¼Ä´æÆ÷*/
+		/*è‹¥splitedï¼Œæ ‡è®°ä¸ºspilledï¼Œä¸å•ç‹¬åˆ†é…å¯„å­˜å™¨*/
 		spilled(reg_head, now_func);
+	}
+	/*åˆ†é…callee_savedçš„ç‰©ç†å¯„å­˜å™¨çš„æ ˆç©ºé—´*/
+	reg_head = now_func->reg_head;
+	while (reg_head->next != NULL)
+	{
+		reg_head = reg_head->next;
+		if (reg_head->is_allocated == true)
+		{
+			int physical_reg_num = reg_head->reg_phisical;
+			if (now_func->map_physical_register_local.count(physical_reg_num) != 0)
+				continue;
+			if (physical_reg_saved[physical_reg_num / num_registers][physical_reg_num % num_registers] == callee_saved)
+				allocate_physical_reg(physical_reg_num, now_func);
+		}
+	}
+	/*åˆ†é…caller_savedçš„ç‰©ç†å¯„å­˜å™¨çš„æ ˆç©ºé—´*/
+	reg_head = now_func->reg_head;
+	while (reg_head->next != NULL)
+	{
+		reg_head = reg_head->next;
+		if (reg_head->is_allocated == true)
+		{
+			int physical_reg_num = reg_head->reg_phisical;
+			if (now_func->map_physical_register_local.count(physical_reg_num) != 0)
+				continue;
+			if (physical_reg_saved[physical_reg_num / num_registers][physical_reg_num % num_registers] == caller_saved)
+				allocate_physical_reg(physical_reg_num, now_func);
+		}
 	}
 
 	check_register_allocate(now_func);
