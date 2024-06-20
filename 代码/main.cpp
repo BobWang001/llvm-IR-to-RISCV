@@ -166,6 +166,8 @@ int main()
 		}
 	}
 	label_bb.resize(tot_label + 1);
+	for (int i = 0; i < label_bb.size(); ++i)
+		label_bb[i] = NULL;
 	std::ifstream file_2("test_f.ll");
 	while (getline(file_2, line))//逐行读入
 	{
