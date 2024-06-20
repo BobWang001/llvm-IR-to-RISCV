@@ -41,21 +41,104 @@
 #define ins_fdiv 12
 #define ins_srem 13
 #define ins_frem 14
-#define ins_fneg 15
-#define ins_icmp 16
-#define ins_fcmp 17
-#define ins_br 18
-#define ins_define 19
-#define ins_call 20
-#define ins_ret 21
-#define ins_label 22
-#define ins_unreachable 23
-#define ins_sitofp 24
-#define ins_fptosi 25
+#define ins_and 15
+#define ins_or 16
+#define ins_xor 17
+#define ins_fneg 18
+#define ins_icmp 19
+#define ins_fcmp 20
+#define ins_br 21
+#define ins_define 22
+#define ins_call 23
+#define ins_ret 24
+#define ins_label 25
+#define ins_unreachable 26
+#define ins_sitofp 27
+#define ins_fptosi 28
+#define ins_copy 29
+#define ins_zext 30
+
+/*instruction of asm*/
+#define ins_asm_mv 0
+#define ins_asm_la 1
+#define ins_asm_li 2
+#define ins_asm_lw 3
+#define ins_asm_flw 4
+#define ins_asm_ld 5
+#define ins_asm_fld 6
+#define ins_asm_sw 7
+#define ins_asm_fsw 8
+#define ins_asm_sd 9
+#define ins_asm_fsd 10
+#define ins_asm_fmv_x_w 11
+#define ins_asm_fmv_w_x 12
+#define ins_asm_add 13
+#define ins_asm_addi 14
+#define ins_asm_sub 15
+#define ins_asm_subi 16
+#define ins_asm_mul 17
+#define ins_asm_div 18
+#define ins_asm_rem 19
+#define ins_asm_and 20
+#define ins_asm_andi 21
+#define ins_asm_or 22
+#define ins_asm_ori 23
+#define ins_asm_xor 24
+#define ins_asm_xori 25
+#define ins_asm_sll 26
+#define ins_asm_srl 27
+#define ins_asm_sra 28
+#define ins_asm_slli 29
+#define ins_asm_srli 30
+#define ins_asm_srai 31
+#define ins_asm_addw 32
+#define ins_asm_addiw 33
+#define ins_asm_subw 34
+#define ins_asm_subiw 35
+#define ins_asm_mulw 36
+#define ins_asm_divw 37
+#define ins_asm_remw 38
+#define ins_asm_andw 39
+#define ins_asm_andiw 40
+#define ins_asm_orw 41
+#define ins_asm_oriw 42
+#define ins_asm_xorw 43
+#define ins_asm_xoriw 44
+#define ins_asm_sllw 45
+#define ins_asm_srlw 46
+#define ins_asm_sraw 47
+#define ins_asm_slliw 48
+#define ins_asm_srliw 49
+#define ins_asm_sraiw 50
+#define ins_asm_fadd_s 51
+#define ins_asm_fsub_s 52
+#define ins_asm_fmul_s 53
+#define ins_asm_fdiv_s 54
+#define ins_asm_frem_s 55
+#define ins_asm_fneg_s 56
+#define ins_asm_fcvt_s_w 57
+#define ins_asm_fcvt_w_s 58
+#define ins_asm_j 59
+#define ins_asm_jal 60
+#define ins_asm_jr 61
+#define ins_asm_beq 62
+#define ins_asm_bne 63
+#define ins_asm_blt 64
+#define ins_asm_ble 65
+#define ins_asm_bgt 66
+#define ins_asm_bge 67
+#define ins_asm_feq_s 68
+#define ins_asm_flt_s 69
+#define ins_asm_fle_s 70
+#define ins_asm_call 71
 
 /*number the registers*/
 #define num_registers 32
-/*ÕûĞÍ*/
+/*type of registers*/
+#define special 0
+#define callee_saved 1
+#define caller_saved 2
+/*æ•´å‹*/
 #define x0 0
 #define x1 1
 #define x2 2
@@ -121,7 +204,7 @@
 #define t4 x29
 #define t5 x30
 #define t6 x31
-/*¸¡µãĞÍ*/
+/*æµ®ç‚¹å‹*/
 #define f0 0
 #define f1 1
 #define f2 2
@@ -187,28 +270,33 @@
 #define ft9 f29
 #define ft10 f30
 #define ft11 f31
+
+/*æš‚å­˜ç©ºé—´åç§»*/
+#define delta_Rd 0
+#define delta_Rs1 8
+#define delta_Rs2 16
 using namespace std;
 
 /*register*/
-struct Register_physical//ÎïÀí¼Ä´æÆ÷
+struct Register_physical//ç‰©ç†å¯„å­˜å™¨
 {
-	bool used,modified;//ÓĞĞ§Î»,ĞŞ¸ÄÎ»
-	int num;//¶ÔÓ¦ĞéÄâ¼Ä´æÆ÷±àºÅ
-	vector<pair<int, int> >occupied;//±»Õ¼ÓÃµÄÇø¼ä
+	bool used,modified;//æœ‰æ•ˆä½,ä¿®æ”¹ä½
+	int num;//å¯¹åº”è™šæ‹Ÿå¯„å­˜å™¨ç¼–å·
+	vector<pair<int, int> >occupied;//è¢«å ç”¨çš„åŒºé—´
 	Register_physical()
 	{
 		occupied.clear();
 	}
 };
 
-struct Register_virtual//ĞéÄâ¼Ä´æÆ÷
+struct Register_virtual//è™šæ‹Ÿå¯„å­˜å™¨
 {
-	type_label name;//Ãû³Æ
-	int num,reg_phisical, is_splited_from;//±àºÅ,·ÖÅäµ½µÄÎïÀí¼Ä´æÆ÷±àºÅ,´ÓÄÄ¸ö¼Ä´æÆ÷splited¹ıÀ´
-	type_spliting_weight spliting_weight, prod;//prodÖ¸ÔÚÓÅÏÈ¶ÓÁĞÄÚµÄÓÅÏÈ¼¶
-	int type;//ÀàĞÍ
-	bool used, is_splited, is_spilled;//ÓĞĞ§Î»,ÀàĞÍ,ÊÇ·ñÒÑ¾­±»spilted¹ıÁË,ÊÇ·ñÏÂ·Åµ½ÄÚ´æ
-	vector < pair<int, int> >live_interval;//»îÔ¾Çø¼ä
+	type_label name;//åç§°
+	int num,reg_phisical, is_splited_from;//ç¼–å·,åˆ†é…åˆ°çš„ç‰©ç†å¯„å­˜å™¨ç¼–å·,ä»å“ªä¸ªå¯„å­˜å™¨splitedè¿‡æ¥
+	type_spliting_weight spliting_weight, prod;//prodæŒ‡åœ¨ä¼˜å…ˆé˜Ÿåˆ—å†…çš„ä¼˜å…ˆçº§
+	int type;//ç±»å‹
+	bool used, is_splited, is_spilled, is_allocated;//æœ‰æ•ˆä½,ç±»å‹,æ˜¯å¦å·²ç»è¢«spiltedè¿‡äº†,æ˜¯å¦ä¸‹æ”¾åˆ°å†…å­˜,æ˜¯å¦è¢«åˆ†é…å¯„å­˜å™¨
+	vector < pair<int, int> >live_interval;//æ´»è·ƒåŒºé—´
 	Register_virtual* next;
 	Register_virtual()
 	{
@@ -216,17 +304,18 @@ struct Register_virtual//ĞéÄâ¼Ä´æÆ÷
 		reg_phisical = -1;
 		is_splited = false;
 		is_spilled = false;
+		is_allocated = false;
 		next = NULL;
 	}
 };
 
-/*·ûºÅ±í*/
+/*ç¬¦å·è¡¨*/
 struct variable_table
 {
-	int num, dim, num_reg, cnt;//±àºÅ,Î¬¶È,¶ÔÓ¦µÄ¼Ä´æÆ÷±àºÅ,±äÁ¿µÄÊıÁ¿
-	int type;//ÀàĞÍ(i32,float,i64)
-	type_variables name;//±äÁ¿Ãû
-	vector<unsigned int>size, val;//Ã¿¸öÎ¬¶ÈµÄ´óĞ¡,Ã¿¸öµ¥Î»µÄÖµ
+	int num, dim, num_reg, cnt;//ç¼–å·,ç»´åº¦,å¯¹åº”çš„å¯„å­˜å™¨ç¼–å·,å˜é‡çš„æ•°é‡
+	int type;//ç±»å‹(i32,float,i64)
+	type_variables name;//å˜é‡å
+	vector<unsigned int>size, val;//æ¯ä¸ªç»´åº¦çš„å¤§å°,æ¯ä¸ªå•ä½çš„å€¼
 	variable_table* next;
 	variable_table()
 	{
@@ -237,34 +326,53 @@ struct variable_table
 	}
 };
 
-/*Ö¸Áî·­Òë*/
+/*æŒ‡ä»¤ç¿»è¯‘*/
 struct instruction
 {
-	int num;//Ö¸Áî±àºÅ
-	int op;//Ö¸ÁîÀàĞÍ
-	int Rd, Rs1, Rs2;//±äÁ¿±àºÅ£ºÄ¿µÄ£¬Ô´1£¬Ô´2
-	bool fRd, fRs1, fRs2;//±äÁ¿ÀàĞÍ£º¾Ö²¿£¬È«¾Ö
-	int tRd, tRs1, tRs2;//±äÁ¿ÀàĞÍ£ºi32£¬i64£¬¸¡µãĞÍ
-	bool fimm, fimm1, fimm2;//ÊÇ·ñÓĞÆ«ÒÆÁ¿
-	unsigned int imm, imm1, imm2;//Æ«ÒÆÁ¿£¬ÓÃÓÚGEPÖ¸Áî,storeÖ¸Áî,ÔËËãÖ¸Áî
-	/*Õë¶ÔxcmpÓï¾ä*/
+	int num;//æŒ‡ä»¤ç¼–å·
+	int op;//æŒ‡ä»¤ç±»å‹
+	int Rd, Rs1, Rs2;//å˜é‡ç¼–å·ï¼šç›®çš„ï¼Œæº1ï¼Œæº2
+	bool fRd, fRs1, fRs2;//å˜é‡ç±»å‹ï¼šå±€éƒ¨ï¼Œå…¨å±€
+	int tRd, tRs1, tRs2;//å˜é‡ç±»å‹ï¼ši32ï¼Œi64ï¼Œæµ®ç‚¹å‹
+	bool fimm, fimm1, fimm2;//æ˜¯å¦æœ‰åç§»é‡
+	unsigned int imm, imm1, imm2;//åç§»é‡ï¼Œç”¨äºGEPæŒ‡ä»¤,storeæŒ‡ä»¤,è¿ç®—æŒ‡ä»¤
+	/*é’ˆå¯¹xcmpè¯­å¥*/
 	int cond;
-	/*Õë¶ÔbrÓï¾ä*/
-	bool branch_flag;//ÊÇ·ñÎªÎŞÌõ¼şÌø×ª
-	int L1, L2;//Ìø×ª±êºÅ¶ÔÓ¦±àºÅ
-	/*Õë¶Ôcall,retÓï¾ä*/
-	int tot_formal,type_ret;//ĞÎ²ÎÊıÁ¿£¬·µ»ØÀàĞÍ
-	type_label name;//±»µ÷º¯ÊıÃû
-	int num_bb;//ËùÔÚbb±àºÅ
-	vector<bool>formal_type;//´æ´¢ĞÎ²ÎµÄÀàĞÍ
-	vector<int>formal_num;//´æ´¢ĞÎ²ÎµÄ±àºÅ
+	/*é’ˆå¯¹brè¯­å¥*/
+	bool branch_flag;//æ˜¯å¦ä¸ºæ— æ¡ä»¶è·³è½¬
+	int L1, L2;//è·³è½¬æ ‡å·å¯¹åº”ç¼–å·
+	/*é’ˆå¯¹call,retè¯­å¥*/
+	int tot_formal,type_ret;//å½¢å‚æ•°é‡ï¼Œè¿”å›ç±»å‹
+	type_label name;//è¢«è°ƒå‡½æ•°å
+	int num_bb;//æ‰€åœ¨bbç¼–å·
+	vector<bool>formal_type;//å­˜å‚¨å½¢å‚çš„ç±»å‹
+	vector<bool>formal_is_imm;//å½¢å‚æ˜¯å¦æ˜¯ç«‹å³æ•°
+	vector<unsigned int>formal_num;//å­˜å‚¨å½¢å‚çš„ç¼–å·,ä¸ºç«‹å³æ•°çš„è¯å­˜å¯¹åº”çš„ç«‹å³æ•°
 	instruction* next;
 	instruction()
 	{
 		Rd = Rs1 = Rs2 = -1;
 		fimm = fimm1 = fimm2 = 0;
+		imm = imm1 = imm2 = 0;
 		branch_flag = 0;
 		tot_formal = 0;
+		next = NULL;
+	}
+};
+
+/*æ±‡ç¼–æŒ‡ä»¤*/
+struct asm_instruction
+{
+	int num;//æŒ‡ä»¤ç¼–å·
+	int op;//æŒ‡ä»¤ç±»å‹
+	int Rd, Rs1, Rs2;//å˜é‡ç¼–å·ï¼šç›®çš„ï¼Œæº1ï¼Œæº2
+	int imm;//åç§»é‡
+	int label;//è·³è½¬æ ‡å·ã€å‡½æ•°åå¯¹åº”ç¼–å·
+	asm_instruction* next;
+	asm_instruction()
+	{
+		Rd = Rs1 = Rs2 = -1;
+		imm = 0;
 		next = NULL;
 	}
 };
@@ -272,11 +380,11 @@ struct instruction
 /*basic block*/
 struct basic_block
 {
-	int num;//bb±àºÅ
-	int l, r;//ÆğÖ¹Ö¸Áî±àºÅ
-	bool is_loop;//ÊÇ·ñÎªÑ­»·Ö¸Áî
-	instruction* ins_head;//ÆğÊ¼Ö¸ÁîÖ¸Õë
-	vector<basic_block*>edge;//Á¬±ß
+	int num;//bbç¼–å·
+	int l, r;//èµ·æ­¢æŒ‡ä»¤ç¼–å·
+	bool is_loop;//æ˜¯å¦ä¸ºå¾ªç¯æŒ‡ä»¤
+	instruction* ins_head;//èµ·å§‹æŒ‡ä»¤æŒ‡é’ˆ
+	vector<basic_block*>edge;//è¿è¾¹
 	basic_block* next;
 	basic_block()
 	{
@@ -289,18 +397,20 @@ struct basic_block
 /*functions*/
 struct functions
 {
-	//º¯Êı±àºÅ,Ö¸ÁîÊı,bbÊı,Êµ²ÎÊıÁ¿,ĞÎ²ÎÊıÁ¿,µ÷ÓÃµÄĞÎ²ÎÊıÁ¿×î´óÖµ,²ÎÊıÊıÁ¿,ËùĞèµÄÕ»¿Õ¼ä´óĞ¡,·µ»ØÖµÀàĞÍ
+	//å‡½æ•°ç¼–å·,æŒ‡ä»¤æ•°,bbæ•°,å®å‚æ•°é‡,å½¢å‚æ•°é‡,è°ƒç”¨çš„å½¢å‚æ•°é‡æœ€å¤§å€¼,å‚æ•°æ•°é‡,æ‰€éœ€çš„æ ˆç©ºé—´å¤§å°,è¿”å›å€¼ç±»å‹
 	int num, cnt_ins, cnt_bb, total_actual, total_formal, max_formal, tot_arg, size, type;
-	type_label name;//º¯ÊıÃû³Æ
-	vector<bool>args;//²ÎÊıÀàĞÍ
-	instruction* ins_head, * ins_tail;//Ö¸ÁîÍ·Î²Ö¸Õë
-	basic_block* bb_head, * bb_tail;//bbÍ·Î²Ö¸Õë
-	variable_table* local_head, * local_tail;//¾Ö²¿±äÁ¿±í
-	map<type_variables, int>map_local;//±äÁ¿Ãûµ½±àºÅµÄÓ³Éä
-	map<int, int>imm_local;//±äÁ¿±àºÅµ½µØÖ·Æ«ÒÆÁ¿µÄÓ³Éä
-	Register_virtual* reg_head, * reg_tail;//ĞéÄâ¼Ä´æÆ÷
-	map<type_label, int>map_local_register;//ĞéÄâ¼Ä´æÆ÷Ãûµ½±àºÅµÄÓ³Éä
-	map<int, Register_virtual*>map_local_register_position;//ĞéÄâ¼Ä´æÆ÷±àºÅµ½Ö¸ÕëµÄÓ³Éä
+	type_label name;//å‡½æ•°åç§°
+	vector<bool>args;//å‚æ•°ç±»å‹
+	instruction* ins_head, * ins_tail;//æŒ‡ä»¤å¤´å°¾æŒ‡é’ˆ
+	asm_instruction* asm_ins_head, * asm_ins_tail;//æ±‡ç¼–æŒ‡ä»¤å¤´å°¾æŒ‡é’ˆ
+	basic_block* bb_head, * bb_tail;//bbå¤´å°¾æŒ‡é’ˆ
+	variable_table* local_head, * local_tail;//å±€éƒ¨å˜é‡è¡¨
+	map<type_variables, int>map_local;//å±€éƒ¨å˜é‡ååˆ°ç¼–å·çš„æ˜ å°„
+	map<int, int>map_physical_register_local;//ç‰©ç†å¯„å­˜å™¨ç¼–å·åˆ°å˜é‡ç¼–å·çš„æ˜ å°„
+	map<int, int>imm_local;//å˜é‡ç¼–å·åˆ°åœ°å€åç§»é‡çš„æ˜ å°„
+	Register_virtual* reg_head, * reg_tail;//è™šæ‹Ÿå¯„å­˜å™¨
+	map<type_label, int>map_local_register;//è™šæ‹Ÿå¯„å­˜å™¨ååˆ°ç¼–å·çš„æ˜ å°„
+	map<int, Register_virtual*>map_local_register_position;//è™šæ‹Ÿå¯„å­˜å™¨ç¼–å·åˆ°æŒ‡é’ˆçš„æ˜ å°„
 	functions* next;
 	functions()
 	{
@@ -313,42 +423,49 @@ struct functions
 		local_tail = local_head;
 		reg_head = new Register_virtual;
 		reg_tail = reg_head;
+		asm_ins_head = new asm_instruction;
+		asm_ins_tail = asm_ins_head;
 		next = NULL;
 	}
 };
 
 /*definitions*/
 extern Register_physical reg[2][num_registers];
-extern map<type_label, int>map_global_register;//È«¾Ö¼Ä´æÆ÷Ãûµ½±àºÅµÄÓ³Éä
-extern map<int, Register_virtual*>map_global_register_position;//È«¾Ö¼Ä´æÆ÷±àºÅµ½Ö¸ÕëµÄÓ³Éä
-extern map<int, Register_virtual*>map_local_register_position;//¾Ö²¿ĞéÄâ¼Ä´æÆ÷±àºÅµ½Ö¸ÕëµÄÓ³Éä
-extern map<int, std::string>map_physical_reg_name[2];//ÎïÀí¼Ä´æÆ÷±àºÅµ½Ãû³ÆµÄÓ³Éä
-extern vector<bool>physical_reg_usable[2];//ÎïÀí¼Ä´æÆ÷ÄÜ·ñÊ¹ÓÃ
-extern vector<int>physical_reg_order[2];//¿¼ÂÇ·ÖÅäÎïÀí¼Ä´æÆ÷µÄË³Ğò
+extern map<type_label, int>map_global_register;//å…¨å±€å¯„å­˜å™¨ååˆ°ç¼–å·çš„æ˜ å°„
+extern map<int, Register_virtual*>map_global_register_position;//å…¨å±€å¯„å­˜å™¨ç¼–å·åˆ°æŒ‡é’ˆçš„æ˜ å°„
+extern map<int, Register_virtual*>map_local_register_position;//å±€éƒ¨è™šæ‹Ÿå¯„å­˜å™¨ç¼–å·åˆ°æŒ‡é’ˆçš„æ˜ å°„
+extern map<int, std::string>map_physical_reg_name;//ç‰©ç†å¯„å­˜å™¨ç¼–å·åˆ°åç§°çš„æ˜ å°„
+extern vector<bool>physical_reg_usable[2];//ç‰©ç†å¯„å­˜å™¨èƒ½å¦ä½¿ç”¨
+extern vector<int>physical_reg_order[2];//è€ƒè™‘åˆ†é…ç‰©ç†å¯„å­˜å™¨çš„é¡ºåº
+extern vector<int>physical_reg_saved[2];//special,caller_saved,callee_saved
 extern int total_register;
 
 extern variable_table* global, * global_tail;
-extern int total_global;//´æ´¢±äÁ¿µÄÊıÁ¿
-extern map<type_variables, int>map_global;//±äÁ¿Ãûµ½±àºÅµÄÓ³Éä
-extern map<int, int>map_register_local;//¼Ä´æÆ÷±àºÅµ½±äÁ¿±àºÅµÄÓ³Éä
+extern int total_global;//å­˜å‚¨å˜é‡çš„æ•°é‡
+extern map<type_variables, int>map_global;//å…¨å±€å˜é‡ååˆ°ç¼–å·çš„æ˜ å°„
+extern map<int, variable_table*>map_variable_position;//å˜é‡ç¼–å·åˆ°æŒ‡é’ˆçš„æ˜ å°„
+extern map<int, int>map_register_local;//å¯„å­˜å™¨ç¼–å·åˆ°å˜é‡ç¼–å·çš„æ˜ å°„
+extern map<int, int>map_register_local_alloca;//allocaè¯­å¥å†…å¯„å­˜å™¨ç¼–å·åˆ°å˜é‡ç¼–å·çš„æ˜ å°„
 
-extern instruction* start;//ÊôÓÚÈ«¾ÖµÄÖ¸Áî
+extern instruction* start;//å±äºå…¨å±€çš„æŒ‡ä»¤
 extern map<std::string, int>ins_num, cond_num;
-extern int tot_instructions;//×ÜµÄÖ¸ÁîÊı
-extern set<int>ins_definied;//»á¶¨ÒåĞéÄâ¼Ä´æÆ÷µÄÖ¸Áî(³ıcall)
-extern set<int>ins_used;//»áÊ¹ÓÃĞéÄâ¼Ä´æÆ÷µÄÖ¸Áî
-extern set<int>ins_valuate;//»á¶ÔRd¸³ÖµµÄÖ¸Áî
-extern map<int, instruction*>map_instruction_position;//Ö¸Áî±àºÅµ½Ö¸ÕëµÄÓ³Éä
-extern map<int, pair<int, int> >map_ins_copy;//¼ÇÂ¼copyÖ¸ÁîµÄÎ»ÖÃ
+extern int tot_instructions;//æ€»çš„æŒ‡ä»¤æ•°
+extern int tot_asm_instructions;//æ€»çš„æ±‡ç¼–æŒ‡ä»¤æ•°
+extern set<int>ins_definied;//ä¼šå®šä¹‰è™šæ‹Ÿå¯„å­˜å™¨çš„æŒ‡ä»¤(é™¤call)
+extern set<int>ins_used;//ä¼šä½¿ç”¨è™šæ‹Ÿå¯„å­˜å™¨çš„æŒ‡ä»¤
+extern set<int>ins_valuate;//ä¼šå¯¹Rdèµ‹å€¼çš„æŒ‡ä»¤
+extern map<int, instruction*>map_instruction_position;//æŒ‡ä»¤ç¼–å·åˆ°æŒ‡é’ˆçš„æ˜ å°„
+extern map<int, pair<int, int> >map_ins_copy;//è®°å½•copyæŒ‡ä»¤çš„ä½ç½®
+extern map<int, std::string>map_asm;//æ±‡ç¼–æŒ‡ä»¤ä»£ç åˆ°å­—ç¬¦æ˜ å°„
 
-extern map<type_label, int>label_num;//labelÃûµ½±àºÅµÄÓ³Éä
-extern map<int, int>label_ins;//labelµ½Ö¸ÁîµÄÓ³Éä
-extern vector<basic_block*>label_bb;//label±àºÅ¶ÔÓ¦µÄbb±àºÅ
-extern int tot_label;//labelÊıÁ¿
+extern map<type_label, int>label_num;//labelååˆ°ç¼–å·çš„æ˜ å°„
+extern map<int, int>label_ins;//labelåˆ°æŒ‡ä»¤çš„æ˜ å°„
+extern vector<basic_block*>label_bb;//labelç¼–å·å¯¹åº”çš„bbç¼–å·
+extern int tot_label;//labelæ•°é‡
 
 extern functions* func_head, * func_tail;
 extern map<type_label, int>map_function;
-extern int tot_functions;//×ÜµÄº¯ÊıÊı
+extern int tot_functions;//æ€»çš„å‡½æ•°æ•°
 
 /*function names*/
 unsigned int floatToBinary(float num);
@@ -361,6 +478,9 @@ void new_label(int op, type_label label, functions* num_func);
 std::string get_new_line(std::string line);
 void get_basic_block(functions* now_func);
 void get_live_interval(functions* now_func);
-void resize_live_interval(Register_virtual* now_reg);//ÕûÀí¼Ä´æÆ÷µÄ»îÔ¾Çø¼ä(¼¯ºÏ²¢)
+void resize_live_interval(Register_virtual* now_reg);//æ•´ç†å¯„å­˜å™¨çš„æ´»è·ƒåŒºé—´(é›†åˆå¹¶)
 void check_live_interval(Register_virtual* now_reg);
 void register_allocate(functions* now_func);
+void get_asm();//å¾—åˆ°æ±‡ç¼–ä»£ç 
+void peephole(functions* now_func);//çª¥å­”ä¼˜åŒ–
+void print_asm(functions* now_func);//æ±‡ç¼–ä»£ç è¾“å‡º
