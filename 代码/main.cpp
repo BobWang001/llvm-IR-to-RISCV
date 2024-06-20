@@ -1,62 +1,77 @@
 #include "riscv.h"
 
 Register_physical reg[2][num_registers];
-map<type_label, int>map_global_register;//È«¾Ö¼Ä´æÆ÷Ãûµ½±àºÅµÄÓ³Éä
-map<int, Register_virtual*>map_global_register_position;//È«¾Ö¼Ä´æÆ÷±àºÅµ½Ö¸ÕëµÄÓ³Éä
-map<int, Register_virtual*>map_local_register_position;//¾Ö²¿ĞéÄâ¼Ä´æÆ÷±àºÅµ½Ö¸ÕëµÄÓ³Éä
-map<int, std::string>map_physical_reg_name[2];//ÎïÀí¼Ä´æÆ÷±àºÅµ½Ãû³ÆµÄÓ³Éä
-vector<bool>physical_reg_usable[2];//ÎïÀí¼Ä´æÆ÷ÄÜ·ñÊ¹ÓÃ
-vector<int>physical_reg_order[2];//¿¼ÂÇ·ÖÅäÎïÀí¼Ä´æÆ÷µÄË³Ğò
+map<type_label, int>map_global_register;//å…¨å±€å¯„å­˜å™¨ååˆ°ç¼–å·çš„æ˜ å°„
+map<int, Register_virtual*>map_global_register_position;//å…¨å±€å¯„å­˜å™¨ç¼–å·åˆ°æŒ‡é’ˆçš„æ˜ å°„
+map<int, Register_virtual*>map_local_register_position;//å±€éƒ¨è™šæ‹Ÿå¯„å­˜å™¨ç¼–å·åˆ°æŒ‡é’ˆçš„æ˜ å°„
+map<int, std::string>map_physical_reg_name;//ç‰©ç†å¯„å­˜å™¨ç¼–å·åˆ°åç§°çš„æ˜ å°„
+vector<bool>physical_reg_usable[2];//ç‰©ç†å¯„å­˜å™¨èƒ½å¦ä½¿ç”¨
+vector<int>physical_reg_order[2];//è€ƒè™‘åˆ†é…ç‰©ç†å¯„å­˜å™¨çš„é¡ºåº
+vector<int>physical_reg_saved[2];//special,caller_saved,callee_saved
 int total_register = 0;
 
 variable_table* global = new variable_table, * global_tail;
-int total_global = 0;//´æ´¢±äÁ¿µÄÊıÁ¿
-map<type_variables, int>map_global;//±äÁ¿Ãûµ½±àºÅµÄÓ³Éä
-map<int, int>map_register_local;//¼Ä´æÆ÷±àºÅµ½±äÁ¿±àºÅµÄÓ³Éä
+int total_global = 0;//å­˜å‚¨å˜é‡çš„æ•°é‡
+map<type_variables, int>map_global;//å˜é‡ååˆ°ç¼–å·çš„æ˜ å°„
+map<int, variable_table*>map_variable_position;//å˜é‡ç¼–å·åˆ°æŒ‡é’ˆçš„æ˜ å°„
+map<int, int>map_register_local;//å¯„å­˜å™¨ç¼–å·åˆ°å˜é‡ç¼–å·çš„æ˜ å°„
+map<int, int>map_register_local_alloca;//allocaè¯­å¥å†…å¯„å­˜å™¨ç¼–å·åˆ°å˜é‡ç¼–å·çš„æ˜ å°„
 
-instruction* start = new instruction;//ÊôÓÚÈ«¾ÖµÄÖ¸Áî
+instruction* start = new instruction;//å±äºå…¨å±€çš„æŒ‡ä»¤
 map<std::string, int>ins_num, cond_num;
-int tot_instructions = 0;//×ÜµÄÖ¸ÁîÊı
-set<int>ins_definied = { 1,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,24,25 };//»á¶¨ÒåĞéÄâ¼Ä´æÆ÷µÄÖ¸Áî(³ıcall)
-set<int>ins_used = { 1,4,24,25 };
-set<int>ins_valuate = { 1,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,24,25 };//»á¶ÔRd¸³ÖµµÄÖ¸Áî
-map<int, instruction*>map_instruction_position;//Ö¸Áî±àºÅµ½Ö¸ÕëµÄÓ³Éä
-map<int, pair<int, int> >map_ins_copy;//¼ÇÂ¼copyÖ¸ÁîµÄÎ»ÖÃ
+int tot_instructions = 0;//æ€»çš„æŒ‡ä»¤æ•°
+set<int>ins_definied;//ä¼šå®šä¹‰è™šæ‹Ÿå¯„å­˜å™¨çš„æŒ‡ä»¤(é™¤call)
+set<int>ins_used;
+set<int>ins_valuate;//ä¼šå¯¹Rdèµ‹å€¼çš„æŒ‡ä»¤
+map<int, instruction*>map_instruction_position;//æŒ‡ä»¤ç¼–å·åˆ°æŒ‡é’ˆçš„æ˜ å°„
+map<int, pair<int, int> >map_ins_copy;//è®°å½•copyæŒ‡ä»¤çš„ä½ç½®
+map<int, std::string>map_asm;//æ±‡ç¼–æŒ‡ä»¤ä»£ç åˆ°å­—ç¬¦æ˜ å°„
 
 
 map<type_label, int>label_num;
-map<int, int>label_ins;//labelµ½Ö¸ÁîµÄÓ³Éä
-vector<basic_block*>label_bb;//label±àºÅ¶ÔÓ¦µÄbb±àºÅ
+map<int, int>label_ins;//labelåˆ°æŒ‡ä»¤çš„æ˜ å°„
+vector<basic_block*>label_bb;//labelç¼–å·å¯¹åº”çš„bbç¼–å·
 int tot_label = 0;
 
 functions* func_head = new functions, * func_tail = new functions;
 map<type_label, int>map_function;
-int tot_functions = 0;//×ÜµÄº¯ÊıÊı
+int tot_functions = 0;//æ€»çš„å‡½æ•°æ•°
 
-void init_definition()//³õÊ¼»¯¶¨Òå
+void init_definition()//åˆå§‹åŒ–å®šä¹‰
 {
 	ins_num = {
 		{"global",0},{"load",1},{"store",2},{"alloca",3},{"getelementptr",4},
 		{"add",5},{"fadd",6},{"sub",7},{"fsub",8},{"mul",9},{"fmul",10},{"sdiv",11},{"fdiv",12},
-		{"srem",13},{"frem",14},{"fneg",15},{"icmp",16}, {"fcmp",17},{"br",18},{"define",19},
-		{"call",20},{"ret",21},{"label",22},{"unreachable",23},{"sitofp",24},{"fptosi",25}
+		{"srem",13},{"frem",14},{"and",15},{"or",16},{"xor",17}, {"fneg",18},{"icmp",19},
+		{"fcmp",20},{"br",21},{"define",22},{"call",23},{"ret",24},{"label",25},
+		{"unreachable",26},{"sitofp",27},{"fptosi",28},{"copy",29},{"zext",30}
 	};
 	cond_num = {
 		{"eq",0},{"ne",1},{"ugt",2},{"sgt",3},{"ule",4},
 		{"sle",5},{"uge",6},{"sge",7},{"ult",8},{"slt",9},
 		{"oeq",10},{"ogt",11},{"oge",12}, {"olt",13},{"ole",14},{"une",15}
 	};
-	map_physical_reg_name[0] = {
+	map_physical_reg_name = {
 		{0,"zero"},{1,"ra"},{2,"sp"},{3,"gp"},{4,"tp"},{5,"t0"},{6,"t1"},{7,"t2"},
 		{8,"s0"},{9,"s1"},{10,"a0"},{11,"a1"},{12,"a2"},{13,"a3"},{14,"a4"},{15,"a5"},
 		{16,"a6"},{17,"a7"},{18,"s2"},{19,"s3"},{20,"s4"},{21,"s5"},{22,"s6"},{23,"s7"},
-		{24,"s8"},{25,"s9"},{26,"s10"},{27,"s11"},{28,"t3"},{29,"t4"},{30,"t5"},{31,"t6"}
-	};
-	map_physical_reg_name[1] = {
+		{24,"s8"},{25,"s9"},{26,"s10"},{27,"s11"},{28,"t3"},{29,"t4"},{30,"t5"},{31,"t6"},
 		{32,"ft0"},{33,"ft1"},{34,"ft2"},{35,"ft3"},{36,"ft4"},{37,"ft5"},{38,"ft6"},{39,"ft7"},
 		{40,"fs0"},{41,"fs1"},{42,"fa0"},{43,"fa1"},{44,"fa2"},{45,"fa3"},{46,"fa4"},{47,"fa5"},
 		{48,"fa6"},{49,"fa7"},{50,"fs2"},{51,"fs3"},{52,"fs4"},{53,"fs5"},{54,"fs6"},{55,"fs7"},
 		{56,"fs8"},{57,"fs9"},{58,"fs10"},{59,"fs11"},{60,"ft8"},{61,"ft9"},{62,"ft10"},{63,"ft11"}
+	};
+	map_asm = {
+		{0,"mv"},{1,"la"},{2,"li"},{3,"lw"},{4,"flw"},{5,"ld"},{6,"fld"}, {7,"sw"},{8,"fsw"},
+		{9,"sd"},{10,"fsd"}, {11,"fmv.x.w"},{12,"fmv.w.x"},{13,"add"},{14,"addi"},{15,"sub"},
+		{16,"subi"},{17,"mul"},{18,"div"},{19,"rem"}, {20,"and"},{21,"andi"},{22,"or"},{23,"ori"},
+		{24,"xor"},{25,"xori"},{26,"sll"},{27,"srl"},{28,"sra"},{29,"slli"},{30,"srli"},{31,"srai"},
+		{32,"addw"},{33,"addiw"},{34,"subw"},{35,"subiw"},{36,"mulw"},{37,"divw"},{38,"remw"},
+		{39,"andw"},{40,"andiw"},{41,"orw"},{42,"oriw"},{43,"xorw"},{44,"xoriw"},{45,"sllw"},
+		{46,"srlw"},{47,"sraw"},{48,"slliw"},{49,"srliw"},{50,"sraiw"},{51,"fadd.s"},{52,"fsub.s"},
+		{53,"fmul.s"},{54,"fdiv.s"},{55,"frem.s"},{56,"fneg.s"},{57,"fcvt.s.w"},{58,"fcvt.w.s"},
+		{59,"j"},{60,"jal"},{61,"jr"},{62,"beq"},{63,"bne"},{64,"blt"},{65,"ble"},{66,"bgt"},
+		{67,"bge"},{68,"feq.s"},{69,"flt.s"},{70,"fle.s"},{71,"call"}
 	};
 	physical_reg_order[0] = {
 		t0,t1,t2
@@ -81,42 +96,65 @@ void init_definition()//³õÊ¼»¯¶¨Òå
 		true,true,true,true,true,true,true,true,
 		true,true,true,true,true,true,true,true
 	};
-	//³õÊ¼»¯º¯ÊıÍ·Î²Ö¸Õë
+	physical_reg_saved[0] = {
+		special,special,special,special,special,caller_saved,caller_saved,caller_saved,
+		callee_saved,callee_saved,caller_saved,caller_saved,caller_saved,caller_saved,caller_saved,caller_saved,
+		caller_saved,caller_saved,callee_saved,callee_saved,callee_saved,callee_saved,callee_saved,callee_saved,
+		callee_saved,callee_saved,callee_saved,callee_saved,caller_saved,caller_saved,caller_saved,caller_saved
+	};
+	physical_reg_saved[1] = {
+		caller_saved,caller_saved,caller_saved,caller_saved,caller_saved,caller_saved,caller_saved,caller_saved,
+		callee_saved,callee_saved,caller_saved,caller_saved,caller_saved,caller_saved,caller_saved,caller_saved,
+		caller_saved,caller_saved,callee_saved,callee_saved,callee_saved,callee_saved,callee_saved,callee_saved,
+		callee_saved,callee_saved,callee_saved,callee_saved,caller_saved,caller_saved,caller_saved,caller_saved
+	};
+	ins_definied = { 
+		ins_load,ins_alloca,ins_getelementptr,ins_add,ins_fadd,ins_sub,ins_fsub,ins_mul,
+		ins_fmul,ins_sdiv,ins_fdiv,ins_srem,ins_frem,ins_and,ins_or,ins_xor,ins_fneg,
+		ins_icmp,ins_fcmp,ins_sitofp,ins_fptosi,ins_zext
+	};
+	ins_used = { ins_load,ins_getelementptr,ins_sitofp,ins_fptosi,ins_zext };
+	ins_valuate = {
+		ins_load,ins_alloca,ins_getelementptr,ins_add,ins_fadd,ins_sub,ins_fsub,ins_mul,
+		ins_fmul,ins_sdiv,ins_fdiv,ins_srem,ins_frem,ins_and,ins_or,ins_xor,ins_fneg,
+		ins_icmp,ins_fcmp,ins_sitofp,ins_fptosi,ins_zext
+	};
+	//åˆå§‹åŒ–å‡½æ•°å¤´å°¾æŒ‡é’ˆ
 	func_tail = func_head;
-	//³õÊ¼»¯È«¾Ö±äÁ¿Î²Ö¸Õë
+	//åˆå§‹åŒ–å…¨å±€å˜é‡å°¾æŒ‡é’ˆ
 	global_tail = global;
 }
 
 int main()
 {
 	FILE* output_stream;
-	freopen_s(&output_stream, "output.out", "w", stdout);
+	//freopen_s(&output_stream, "output.out", "w", stdout);
 	init_definition();
-	std::ifstream file("test_f.ll");//´ò¿ªÎÄ¼ş
+	std::ifstream file("test_f.ll");//æ‰“å¼€æ–‡ä»¶
 	if (!file.is_open())
 	{
-		std::cerr << "ÎŞ·¨´ò¿ªÎÄ¼ş" << std::endl;
+		std::cerr << "æ— æ³•æ‰“å¼€æ–‡ä»¶" << std::endl;
 		return 1;
 	}
 	std::string line;
 	std::string s;
-	functions* lst_func = func_head, * now_func = NULL;//Ö¸ÏòÉÏÒ»¸öº¯Êı£¬Ö¸Ïòµ±Ç°º¯Êı
-	bool in_func = 0;//ÊÇ·ñÔÚº¯ÊıÄÚ²¿£¬³õÊ¼»¯Îª·ñ
-	/*ÏÈÕÒ³öËùÓĞÈ«¾Ö±äÁ¿*/
-	while(getline(file,line))//ÖğĞĞ¶ÁÈë
+	functions* lst_func = func_head, * now_func = NULL;//æŒ‡å‘ä¸Šä¸€ä¸ªå‡½æ•°ï¼ŒæŒ‡å‘å½“å‰å‡½æ•°
+	bool in_func = 0;//æ˜¯å¦åœ¨å‡½æ•°å†…éƒ¨ï¼Œåˆå§‹åŒ–ä¸ºå¦
+	/*å…ˆæ‰¾å‡ºæ‰€æœ‰å…¨å±€å˜é‡*/
+	while(getline(file,line))//é€è¡Œè¯»å…¥
 	{
 		if (line[0] == ';')
 			continue;
 		std::istringstream word(line);
 		while (word >> s)
 		{
-			if (check_label(s))//È¡³ölabel
+			if (check_label(s))//å–å‡ºlabel
 			{
 				type_label ret = get_label(s);
 				tot_label++;
 				label_num[ret] = tot_label;
 			}
-			int option = -1;//²Ù×÷£¬Ã»ÓĞÊ¶±ğ³öÖ¸ÁîÊÓÎª-1
+			int option = -1;//æ“ä½œï¼Œæ²¡æœ‰è¯†åˆ«å‡ºæŒ‡ä»¤è§†ä¸º-1
 			if (ins_num.count(s) == 0)
 				continue;
 			else option = ins_num[s];
@@ -129,32 +167,32 @@ int main()
 	}
 	label_bb.resize(tot_label + 1);
 	std::ifstream file_2("test_f.ll");
-	while (getline(file_2, line))//ÖğĞĞ¶ÁÈë
+	while (getline(file_2, line))//é€è¡Œè¯»å…¥
 	{
 		std::istringstream word(line);
 		while (word >> s)
 		{
 			if (s[0] == ';')
 				break;
-			if (s[0] == '}')//µ½´ïº¯Êı¶¨ÒåµÄÄ©Î²
+			if (s[0] == '}')//åˆ°è¾¾å‡½æ•°å®šä¹‰çš„æœ«å°¾
 			{
-				get_basic_block(now_func);//ÕÒ³öbasic blocks
-				get_live_interval(now_func);//ÕÒ³öÃ¿¸öĞéÄâ¼Ä´æÆ÷µÄ»îÔ¾Çø¼ä
-				register_allocate(now_func);//¼Ä´æÆ÷·ÖÅä
-				end_function(now_func);//¼ÆËãº¯ÊıËùĞèµÄ¿Õ¼ä´óĞ¡
+				get_basic_block(now_func);//æ‰¾å‡ºbasic blocks
+				get_live_interval(now_func);//æ‰¾å‡ºæ¯ä¸ªè™šæ‹Ÿå¯„å­˜å™¨çš„æ´»è·ƒåŒºé—´
+				register_allocate(now_func);//å¯„å­˜å™¨åˆ†é…
+				end_function(now_func);//è®¡ç®—å‡½æ•°æ‰€éœ€çš„ç©ºé—´å¤§å°
 				in_func = 0;
 			}
-			if (check_label(s))//µ¥¶À´¦Àílabel
+			if (check_label(s))//å•ç‹¬å¤„ç†label
 			{
 				type_label ret = get_label(s);
 				new_label(ins_label, ret, now_func);
 				line = get_new_line(line);
 			}
-			int option = -1;//²Ù×÷£¬Ã»ÓĞÊ¶±ğ³öÖ¸ÁîÊÓÎª-1
+			int option = -1;//æ“ä½œï¼Œæ²¡æœ‰è¯†åˆ«å‡ºæŒ‡ä»¤è§†ä¸º-1
 			if (ins_num.count(s) == 0)
 				continue;
 			else option = ins_num[s];
-			if (option == ins_define)//µ¥¶À´¦Àíº¯Êı¶¨ÒåÓï¾ä
+			if (option == ins_define)//å•ç‹¬å¤„ç†å‡½æ•°å®šä¹‰è¯­å¥
 			{
 				functions* ret = new_function(line);
 				lst_func->next = ret;
@@ -170,11 +208,12 @@ int main()
 			}
 		}
 	}
-	/*ÕÒ³öÈ«¾Ö±äÁ¿µÄ»îÔ¾Çø¼ä*/
+	//get_asm();
+	/*æ‰¾å‡ºå…¨å±€å˜é‡çš„æ´»è·ƒåŒºé—´*/
 	/*for (auto it : map_global_register_position)
 	{
 		Register_virtual* now_reg = it.second;
-		resize_live_interval(now_reg);//ÕûÀí¼Ä´æÆ÷µÄ»îÔ¾Çø¼ä(¼¯ºÏ²¢)
+		resize_live_interval(now_reg);//æ•´ç†å¯„å­˜å™¨çš„æ´»è·ƒåŒºé—´(é›†åˆå¹¶)
 		check_live_interval(now_reg);
 	}*/
 	return 0;
