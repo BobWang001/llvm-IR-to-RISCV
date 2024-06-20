@@ -1,12 +1,12 @@
 #include "riscv.h"
 
-vector<basic_block*>bb_stack;//½«¾­¹ıµÄbb·ÅÈëÕ»ÖĞ,vectorÄ£Äâ
-set<int>bb_in_stack;//¼ÇÂ¼ÔÚÕ»ÄÚµÄbb
-map<int, int>reg_definied;//¼ÇÂ¼ĞéÄâ¼Ä´æÆ÷±»¸³ÖµµÄÎ»ÖÃ
-map<int, int>reg_used;//¼ÇÂ¼ĞéÄâ¼Ä´æÆ÷±»Ê¹ÓÃµÄÎ»ÖÃ
-vector<int>reg_num;//¼ÇÂ¼¶¨Òå¹ıµÄ¾Ö²¿ĞéÄâ¼Ä´æÆ÷
-extern set<int>ins_definied;//»á¶¨ÒåĞéÄâ¼Ä´æÆ÷µÄÖ¸Áî(³ıcall)
-extern set<int>ins_used;//»áÊ¹ÓÃĞéÄâ¼Ä´æÆ÷µÄÖ¸Áî
+vector<basic_block*>bb_stack;//å°†ç»è¿‡çš„bbæ”¾å…¥æ ˆä¸­,vectoræ¨¡æ‹Ÿ
+set<int>bb_in_stack;//è®°å½•åœ¨æ ˆå†…çš„bb
+map<int, int>reg_definied;//è®°å½•è™šæ‹Ÿå¯„å­˜å™¨è¢«èµ‹å€¼çš„ä½ç½®
+map<int, int>reg_used;//è®°å½•è™šæ‹Ÿå¯„å­˜å™¨è¢«ä½¿ç”¨çš„ä½ç½®
+vector<int>reg_num;//è®°å½•å®šä¹‰è¿‡çš„å±€éƒ¨è™šæ‹Ÿå¯„å­˜å™¨
+extern set<int>ins_definied;//ä¼šå®šä¹‰è™šæ‹Ÿå¯„å­˜å™¨çš„æŒ‡ä»¤(é™¤call)
+extern set<int>ins_used;//ä¼šä½¿ç”¨è™šæ‹Ÿå¯„å­˜å™¨çš„æŒ‡ä»¤
 
 bool cmp(pair<int, int>a, pair<int, int>b)
 {
@@ -42,33 +42,38 @@ void reg_write(instruction* ins_head, int reg_num, int val)
 
 void get_used(instruction* ins_head)
 {
-	if (ins_used.find(ins_head->op) != ins_used.end())//Rs1¾ø¶ÔÎª¼Ä´æÆ÷
+	if (ins_used.find(ins_head->op) != ins_used.end())//Rs1ç»å¯¹ä¸ºå¯„å­˜å™¨
 		reg_write(ins_head, ins_head->Rs1, ins_head->num);
-	if (ins_head->op == ins_store)//storeÖ¸ÁîÓÃµ½ÁËRd
+	if (ins_head->op == ins_store)//storeæŒ‡ä»¤ç”¨åˆ°äº†Rd
 	{
 		reg_write(ins_head, ins_head->Rd, ins_head->num);
 		if(ins_head->fimm==0)
 			reg_write(ins_head, ins_head->Rs1, ins_head->num);
 	}
-	if (ins_head->op >= ins_add && ins_head->op <= ins_fcmp)//ĞèÒªÅĞ¶ÏÁ¢¼´Êı
+	if (ins_head->op >= ins_add && ins_head->op <= ins_fcmp)//éœ€è¦åˆ¤æ–­ç«‹å³æ•°
 	{
 		if (ins_head->fimm1 == 0)
 			reg_write(ins_head, ins_head->Rs1, ins_head->num);
 		if (ins_head->fimm2 == 0 && ins_head->op != ins_fneg)
 			reg_write(ins_head, ins_head->Rs2, ins_head->num);
 	}
-	if (ins_head->op == ins_br && ins_head->branch_flag)//ĞèÒªÅĞ¶ÏÌõ¼şÌø×ª
+	if (ins_head->op == ins_br && ins_head->branch_flag)//éœ€è¦åˆ¤æ–­æ¡ä»¶è·³è½¬
 		reg_write(ins_head, ins_head->Rs1, ins_head->num);
-	if (ins_head->op == ins_call)//±éÀú²ÎÊıÁĞ±í
+	if (ins_head->op == ins_call)//éå†å‚æ•°åˆ—è¡¨
 	{
+		int nw = 0;
 		for (auto it : ins_head->formal_num)
+		{
+			if (ins_head->formal_is_imm[nw])
+				continue;
 			reg_write(ins_head, it, ins_head->num);
+		}
 	}
-	if (ins_head->op == ins_ret && ins_head->type_ret != 2)//retÖ¸ÁîĞèÒªÅĞ¶ÏÊÇ·ñÎªvoid
+	if (ins_head->op == ins_ret && ins_head->type_ret != 2)//retæŒ‡ä»¤éœ€è¦åˆ¤æ–­æ˜¯å¦ä¸ºvoid
 		reg_write(ins_head, ins_head->Rs1, ins_head->num);
 }
 
-/*ÔÚĞéÄâ¼Ä´æÆ÷ÄÚ²åÈë»îÔ¾Çø¼ä*/
+/*åœ¨è™šæ‹Ÿå¯„å­˜å™¨å†…æ’å…¥æ´»è·ƒåŒºé—´*/
 void add_live_interval(Register_virtual* reg_num, int l, int r)
 {
 	for (auto it : bb_stack)
@@ -82,9 +87,9 @@ void add_live_interval(Register_virtual* reg_num, int l, int r)
 
 void dfs(functions* now_func, basic_block* now_bb)
 {
-	if (now_bb->next == NULL)//½áÎ²bb
+	if (now_bb->next == NULL)//ç»“å°¾bb
 		return;
-	if (bb_in_stack.find(now_bb->num) != bb_in_stack.end())//³öÏÖ»·
+	if (bb_in_stack.find(now_bb->num) != bb_in_stack.end())//å‡ºç°ç¯
 	{
 		bool find_loop = false;
 		for (auto it : bb_stack)
@@ -92,7 +97,7 @@ void dfs(functions* now_func, basic_block* now_bb)
 			if (it->num == now_bb->num)
 				find_loop = true;
 			if (find_loop)
-				it->is_loop = true;//±ê¼ÇÑ­»·ÄÚµÄbb
+				it->is_loop = true;//æ ‡è®°å¾ªç¯å†…çš„bb
 		}
 		return;
 	}
@@ -101,12 +106,12 @@ void dfs(functions* now_func, basic_block* now_bb)
 	instruction* ins_head = now_bb->ins_head;
 	while (ins_head != NULL && ins_head->num <= now_bb->r)
 	{
-		if (check_definied(ins_head))//ÓĞ¼Ä´æÆ÷±»¶¨Òå
+		if (check_definied(ins_head))//æœ‰å¯„å­˜å™¨è¢«å®šä¹‰
 		{
-			reg_definied[ins_head->Rd] = ins_head->num;//¼ÇÂ¼±»¶¨ÒåµÄÎ»ÖÃ
+			reg_definied[ins_head->Rd] = ins_head->num;//è®°å½•è¢«å®šä¹‰çš„ä½ç½®
 			reg_num.push_back(ins_head->Rd);
 		}
-		get_used(ins_head);//½«Ê¹ÓÃ¹ıµÄ¼Ä´æÆ÷¼ÇÂ¼
+		get_used(ins_head);//å°†ä½¿ç”¨è¿‡çš„å¯„å­˜å™¨è®°å½•
 		ins_head = ins_head->next;
 	}
 	for (auto it : reg_used)
@@ -115,7 +120,7 @@ void dfs(functions* now_func, basic_block* now_bb)
 		if (map_global_register_position.count(it.first) != 0)
 			add_live_interval(map_global_register_position[it.first], l, r);
 		else
-			add_live_interval(now_func->map_local_register_position[it.first], l, r);//½«Çø¼ä¼ÓÈë¼Ä´æÆ÷»îÔ¾Çø¼ä
+			add_live_interval(now_func->map_local_register_position[it.first], l, r);//å°†åŒºé—´åŠ å…¥å¯„å­˜å™¨æ´»è·ƒåŒºé—´
 	}
 	reg_used.clear();
 	for (auto it : now_bb->edge)
@@ -130,7 +135,7 @@ void resize_live_interval(Register_virtual* now_reg)
 	lst_live_interval.clear();
 	for (auto it : now_reg->live_interval)
 		lst_live_interval.push_back({ it.first,it.second });
-	sort(lst_live_interval.begin(), lst_live_interval.end(), cmp);//ÏÈ½«Çø¼äÅÅÁĞ
+	sort(lst_live_interval.begin(), lst_live_interval.end(), cmp);//å…ˆå°†åŒºé—´æ’åˆ—
 	now_reg->live_interval.clear();
 	now_reg->live_interval.shrink_to_fit();
 	int L = -1, R = -1;
@@ -143,7 +148,7 @@ void resize_live_interval(Register_virtual* now_reg)
 		}
 		else
 		{
-			if (l > R + 1)//»®·ÖĞÂÇø¼ä(¼¯ºÏÇó²¢¼¯)
+			if (l > R + 1)//åˆ’åˆ†æ–°åŒºé—´(é›†åˆæ±‚å¹¶é›†)
 			{
 				now_reg->live_interval.push_back({ L,R });
 				L = l; R = r;
@@ -157,7 +162,7 @@ void resize_live_interval(Register_virtual* now_reg)
 	lst_live_interval.shrink_to_fit();
 }
 
-void check_live_interval(Register_virtual* now_reg)//µ÷ÊÔĞÅÏ¢
+void check_live_interval(Register_virtual* now_reg)//è°ƒè¯•ä¿¡æ¯
 {
 	printf(";reg_name=%s reg_number=%d live_intervals: ", now_reg->name.c_str(), now_reg->num);
 	for (auto it : now_reg->live_interval)
@@ -172,13 +177,13 @@ void get_live_interval(functions* now_func)
 	if (bb_head->next == now_func->bb_tail)
 		return;
 	bb_head = bb_head->next;
-	for (auto it : map_global)//ÏÈ²åÈëÈ«¾Ö±äÁ¿±»¸³ÖµµÄÎ»ÖÃ
+	for (auto it : map_global)//å…ˆæ’å…¥å…¨å±€å˜é‡è¢«èµ‹å€¼çš„ä½ç½®
 		reg_definied[it.second] = bb_head->ins_head->num;
 	dfs(now_func, bb_head);
 	for (auto it : reg_num)
 	{
 		Register_virtual* now_reg = now_func->map_local_register_position[it];
-		resize_live_interval(now_reg);//ÕûÀí¼Ä´æÆ÷µÄ»îÔ¾Çø¼ä(¼¯ºÏ²¢)
+		resize_live_interval(now_reg);//æ•´ç†å¯„å­˜å™¨çš„æ´»è·ƒåŒºé—´(é›†åˆå¹¶)
 		//check_live_interval(now_reg);
 	}
 	
