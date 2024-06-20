@@ -145,7 +145,7 @@ void new_variable(int op, std::string line, functions* num_func = NULL)
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == 9 || line[p] == ',')
+		if (line[p] == ' ' || line[p] == 9 || line[p] == ',' || line[p] == 13)
 		{
 			p++;
 			continue;
@@ -177,7 +177,7 @@ void new_variable(int op, std::string line, functions* num_func = NULL)
 			default:
 			{
 				p++;
-				while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
+				while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',' && line[p] != 13)
 				{
 					word.push_back(line[p]);
 					p++;
@@ -401,7 +401,7 @@ void new_load(int op,std::string line,functions* num_func)
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9 || line[p] == 13)
 		{
 			p++;
 			continue;
@@ -411,7 +411,7 @@ void new_load(int op,std::string line,functions* num_func)
 		/*获得单词：除了存在中括号进行括号匹配以外，其他均为读到空格停止*/
 		is_ins = 1;
 		std::string word;
-		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
+		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',' && line[p] != 13)
 		{
 			word.push_back(line[p]);
 			p++;
@@ -437,6 +437,9 @@ void new_load(int op,std::string line,functions* num_func)
 		}
 		else if (!fRs)
 		{
+
+			printf("%s\n", word.c_str());
+
 			if (word == "getelementptr")
 			{
 				std:string ret = line.substr(p+1);
@@ -476,7 +479,7 @@ void new_store(int op, std::string line, functions* num_func)
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9 || line[p] == 13)
 		{
 			p++;
 			continue;
@@ -486,7 +489,7 @@ void new_store(int op, std::string line, functions* num_func)
 		/*获得单词：除了存在中括号进行括号匹配以外，其他均为读到空格停止*/
 		is_ins = 1;
 		std::string word;
-		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
+		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',' && line[p] != 13)
 		{
 			word.push_back(line[p]);
 			p++;
@@ -560,7 +563,8 @@ void new_GEP(int op, std::string line, functions* num_func)
 	vector<int>size, size_gep;
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == 9 || line[p] == '*' || line[p]==',' || line[p] == '(' || line[p] == ')')
+		if (line[p] == ' ' || line[p] == 9 || line[p] == '*' || line[p] == ','
+			|| line[p] == '(' || line[p] == ')' || line[p] == 13)
 		{
 			p++;
 			continue;
@@ -593,7 +597,7 @@ void new_GEP(int op, std::string line, functions* num_func)
 			default:
 			{
 				p++;
-				while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
+				while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',' && line[p] != 13)
 				{
 					word.push_back(line[p]);
 					p++;
@@ -672,7 +676,7 @@ void new_operation(int op, std::string line, functions* num_func)
 		fRs2_imm = 1;
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9 || line[p] == 13)
 		{
 			p++;
 			continue;
@@ -682,7 +686,7 @@ void new_operation(int op, std::string line, functions* num_func)
 		/*获得单词：除了存在中括号进行括号匹配以外，其他均为读到空格停止*/
 		is_ins = 1;
 		std::string word;
-		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
+		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',' && line[p] != 13)
 		{
 			word.push_back(line[p]);
 			p++;
@@ -773,7 +777,7 @@ void new_xcmp(int op, std::string line, functions* num_func)
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9 || line[p] == 13)
 		{
 			p++;
 			continue;
@@ -783,7 +787,7 @@ void new_xcmp(int op, std::string line, functions* num_func)
 		/*获得单词：除了存在中括号进行括号匹配以外，其他均为读到空格停止*/
 		is_ins = 1;
 		std::string word;
-		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
+		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',' && line[p] != 13)
 		{
 			word.push_back(line[p]);
 			p++;
@@ -875,7 +879,7 @@ void new_branch(int op, std::string line, functions* num_func)
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9 || line[p] == 13)
 		{
 			p++;
 			continue;
@@ -885,7 +889,7 @@ void new_branch(int op, std::string line, functions* num_func)
 		/*获得单词：除了存在中括号进行括号匹配以外，其他均为读到空格停止*/
 		is_ins = 1;
 		std::string word;
-		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
+		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',' && line[p] != 13)
 		{
 			word.push_back(line[p]);
 			p++;
@@ -948,13 +952,13 @@ void get_instruction_args(instruction* ins, std::string line, functions* num_fun
 	bool last_type = 0;//当前参数类型
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9 || line[p] == 13)
 		{
 			p++;
 			continue;
 		}
 		std::string word;
-		while (p < len && line[p] != ' ' && line[p] != ',')
+		while (p < len && line[p] != ' ' && line[p] != ',' && line[p] != 13)
 		{
 			word.push_back(line[p]);
 			p++;
@@ -970,7 +974,7 @@ void get_instruction_args(instruction* ins, std::string line, functions* num_fun
 			if ((word[0] >= '0' && word[0] <= '9') || word[0] == '-')//参数为立即数
 			{
 				ins->formal_is_imm.push_back(true);
-				if (last_type)//float
+				if (last_type == float32)//float
 					ins->formal_num.push_back(floatToBinary(atof(word.c_str())));
 				else//i32
 					ins->formal_num.push_back(atoi(word.c_str()));
@@ -997,7 +1001,7 @@ void new_call(int op, std::string line, functions* num_func)
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9 || line[p] == 13)
 		{
 			p++;
 			continue;
@@ -1007,7 +1011,8 @@ void new_call(int op, std::string line, functions* num_func)
 		/*获得单词：除了存在中括号进行括号匹配以外，其他均为读到空格或者'('停止*/
 		is_ins = 1;
 		std::string word;
-		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',' && line[p] != '(')
+		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ','
+			&& line[p] != '(' && line[p] != 13)
 		{
 			word.push_back(line[p]);
 			p++;
@@ -1088,7 +1093,7 @@ void new_ret(int op, std::string line, functions* num_func)
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9 || line[p] == 13)
 		{
 			p++;
 			continue;
@@ -1098,7 +1103,7 @@ void new_ret(int op, std::string line, functions* num_func)
 		/*获得单词：其他均为读到空格停止*/
 		is_ins = 1;
 		std::string word;
-		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
+		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',' && line[p] != 13)
 		{
 			word.push_back(line[p]);
 			p++;
@@ -1146,13 +1151,13 @@ void get_args(functions* new_function, std::string line)
 	bool last_type = 0;//当前参数类型
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == ',')
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 13)
 		{
 			p++;
 			continue;
 		}
 		std::string word;
-		while (p < len && line[p] != ' ' && line[p] != ',')
+		while (p < len && line[p] != ' ' && line[p] != ',' && line[p] != 13)
 		{
 			word.push_back(line[p]);
 			p++;
@@ -1184,7 +1189,7 @@ functions* new_function(std::string line)
 	/*先找到除参数列表以外的信息*/
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == ',')
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 13)
 		{
 			p++;
 			continue;
@@ -1193,7 +1198,8 @@ functions* new_function(std::string line)
 			break;
 		/*获得单词：除了存在小括号进行括号匹配以外，其他均为读到空格停止*/
 		std::string word;
-		while (p<len && line[p] != ' ' && line[p] != ';' && line[p] != ',' && line[p] != '(')
+		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ','
+			&& line[p] != '(' && line[p] != 13)
 		{
 			word.push_back(line[p]);
 			p++;
@@ -1286,7 +1292,7 @@ int check_label(std::string s)
 	int len = s.length();
 	for (int p = 0; p < len; ++p)
 	{
-		if (s[p] == ' ' || s[p] == 9)
+		if (s[p] == ' ' || s[p] == 9 || s[p] == 13)
 			continue;
 		if (s[p] == ';')
 			return 0;
@@ -1302,7 +1308,7 @@ std::string get_label(std::string s)
 	std::string ret = "%";
 	for (int p = 0; p < len;)
 	{
-		if (s[p] == ' ' || s[p] == 9)
+		if (s[p] == ' ' || s[p] == 9 || s[p] == 13)
 		{
 			p++;
 			continue;
@@ -1370,7 +1376,7 @@ void new_xtoy(int op,std::string line, functions* num_func)
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9 || line[p] == 13)
 		{
 			p++;
 			continue;
@@ -1380,7 +1386,7 @@ void new_xtoy(int op,std::string line, functions* num_func)
 		/*获得单词：除了存在中括号进行括号匹配以外，其他均为读到空格停止*/
 		is_ins = 1;
 		std::string word;
-		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
+		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',' && line[p] != 13)
 		{
 			word.push_back(line[p]);
 			p++;
@@ -1450,7 +1456,7 @@ void new_zext(int op, std::string line, functions* num_func)
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9 || line[p] == 13)
 		{
 			p++;
 			continue;
@@ -1460,7 +1466,7 @@ void new_zext(int op, std::string line, functions* num_func)
 		/*获得单词：除了存在中括号进行括号匹配以外，其他均为读到空格停止*/
 		is_ins = 1;
 		std::string word;
-		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
+		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',' && line[p] != 13)
 		{
 			word.push_back(line[p]);
 			p++;
