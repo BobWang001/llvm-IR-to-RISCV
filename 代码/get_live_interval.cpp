@@ -61,8 +61,13 @@ void get_used(instruction* ins_head)
 		reg_write(ins_head, ins_head->Rs1, ins_head->num);
 	if (ins_head->op == ins_call)//遍历参数列表
 	{
+		int nw = 0;
 		for (auto it : ins_head->formal_num)
+		{
+			if (ins_head->formal_is_imm[nw])
+				continue;
 			reg_write(ins_head, it, ins_head->num);
+		}
 	}
 	if (ins_head->op == ins_ret && ins_head->type_ret != 2)//ret指令需要判断是否为void
 		reg_write(ins_head, ins_head->Rs1, ins_head->num);

@@ -3,6 +3,7 @@
 extern map<int, Register_virtual*>map_global_register_position;//全局寄存器编号到指针的映射
 extern map<int, Register_virtual*>map_local_register_position;//局部虚拟寄存器编号到指针的映射
 extern map<int, int>map_register_local;//寄存器编号到变量编号的映射
+extern map<int, int>map_register_local_alloca;//alloca语句内寄存器编号到变量编号的映射
 extern int total_global;//存储变量的数量
 extern variable_table* global, * global_tail;
 extern int tot_instructions;//总的指令数
@@ -11,6 +12,7 @@ extern map<type_label, int>label_num;
 extern map<int, int>label_ins;//label到指令的映射
 extern int tot_label;
 extern map<int, instruction*>map_instruction_position;//指令编号到指针的映射
+extern map<int, variable_table*>map_variable_position;//变量编号到指针的映射
 
 unsigned int floatToBinary(float num)//将浮点数转换为对应的二进制数
 {
@@ -130,7 +132,7 @@ void new_variable_value(variable_table* new_global, std::string word)
 	}
 }
 
-void new_variable(int op, std::string line, variable_table* tail, functions* num_func = NULL)
+void new_variable(int op, std::string line, functions* num_func = NULL)
 {
 
 	printf(";%s\n", line.c_str());
@@ -143,7 +145,7 @@ void new_variable(int op, std::string line, variable_table* tail, functions* num
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == 9 || line[p] == ',')
+		if (line[p] == ' ' || line[p] == 9 || line[p] == ',' || line[p] == 13)
 		{
 			p++;
 			continue;
@@ -175,7 +177,7 @@ void new_variable(int op, std::string line, variable_table* tail, functions* num
 			default:
 			{
 				p++;
-				while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
+				while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',' && line[p] != 13)
 				{
 					word.push_back(line[p]);
 					p++;
@@ -220,7 +222,7 @@ void new_variable(int op, std::string line, variable_table* tail, functions* num
 		return;
 	new_variable->num = total_global + 1;//记录编号
 	new_register->num = ++total_register;
-	map_register_local[new_register->num] = new_variable->num;
+	map_register_local_alloca[new_register->num] = new_variable->num;
 	if (op)
 	{
 		num_func->map_local[new_variable->name] = new_variable->num;
@@ -242,12 +244,8 @@ void new_variable(int op, std::string line, variable_table* tail, functions* num
 		map_global_register_position[new_register->num] = new_register;
 	}
 	total_global += new_variable->cnt;
-	//用0补齐
-	while (new_variable->val.size() < new_variable->cnt)
-		new_variable->val.push_back(0);
 	new_variable->next = NULL;
-	tail->next = new_variable;
-	tail = new_variable;
+	map_variable_position[new_variable->num] = new_variable;
 	//加入局部变量
 	if (op)
 	{
@@ -257,8 +255,13 @@ void new_variable(int op, std::string line, variable_table* tail, functions* num
 		num_func->reg_tail->next = new_register;
 		num_func->reg_tail = new_register;
 	}
+	else
+	{
+		global_tail->next = new_variable;
+		global_tail = new_variable;
+	}
 
-	printf(";register_name=%s,type=%d\n", new_register->name.c_str(), new_register->type);
+	printf(";register_name=%s,number=%d,type=%d\n", new_register->name.c_str(), new_register->num, new_register->type);
 	printf(";variable_name=%s,number=%d,type=%d,dim=%d,cnt=%d\n", new_variable->name.c_str(), new_variable->num, new_variable->type, new_variable->dim, new_variable->cnt);
 	printf(";size: ");
 	for (auto it : new_variable->size)
@@ -398,7 +401,7 @@ void new_load(int op,std::string line,functions* num_func)
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9 || line[p] == 13)
 		{
 			p++;
 			continue;
@@ -408,7 +411,7 @@ void new_load(int op,std::string line,functions* num_func)
 		/*获得单词：除了存在中括号进行括号匹配以外，其他均为读到空格停止*/
 		is_ins = 1;
 		std::string word;
-		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
+		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',' && line[p] != 13)
 		{
 			word.push_back(line[p]);
 			p++;
@@ -473,7 +476,7 @@ void new_store(int op, std::string line, functions* num_func)
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9 || line[p] == 13)
 		{
 			p++;
 			continue;
@@ -483,7 +486,7 @@ void new_store(int op, std::string line, functions* num_func)
 		/*获得单词：除了存在中括号进行括号匹配以外，其他均为读到空格停止*/
 		is_ins = 1;
 		std::string word;
-		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
+		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',' && line[p] != 13)
 		{
 			word.push_back(line[p]);
 			p++;
@@ -557,7 +560,8 @@ void new_GEP(int op, std::string line, functions* num_func)
 	vector<int>size, size_gep;
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == 9 || line[p] == '*' || line[p]==',' || line[p] == '(' || line[p] == ')')
+		if (line[p] == ' ' || line[p] == 9 || line[p] == '*' || line[p] == ','
+			|| line[p] == '(' || line[p] == ')' || line[p] == 13)
 		{
 			p++;
 			continue;
@@ -590,7 +594,7 @@ void new_GEP(int op, std::string line, functions* num_func)
 			default:
 			{
 				p++;
-				while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
+				while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',' && line[p] != 13)
 				{
 					word.push_back(line[p]);
 					p++;
@@ -665,11 +669,11 @@ void new_operation(int op, std::string line, functions* num_func)
 	Register_virtual* new_register = new Register_virtual;
 	bool is_ins = 0, fRd = 0, fRs1_imm = 0, fRs2_imm = 0, type = 0;//标记是否已经找到了目的变量及其type，源变量(1/2)及其type
 	int len = line.length();
-	if (op == 15)
+	if (op == ins_fneg)
 		fRs2_imm = 1;
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9 || line[p] == 13)
 		{
 			p++;
 			continue;
@@ -679,13 +683,14 @@ void new_operation(int op, std::string line, functions* num_func)
 		/*获得单词：除了存在中括号进行括号匹配以外，其他均为读到空格停止*/
 		is_ins = 1;
 		std::string word;
-		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
+		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',' && line[p] != 13)
 		{
 			word.push_back(line[p]);
 			p++;
 		}
-		if (word == "=" || word == "add" || word == "fadd" || word == "sub" || word == "fsub" 
+		if (word == "=" || word == "add" || word == "fadd" || word == "sub" || word == "fsub"
 			|| word == "mul" || word == "fmul" || word == "sdiv" || word == "fdiv"
+			|| word == "and" || word == "or" || word == "xor"
 			|| word == "srem" || word == "frem" || word == "fneg")
 			continue;
 		if (!fRd)
@@ -704,7 +709,7 @@ void new_operation(int op, std::string line, functions* num_func)
 			if (word[0] >= '0' && word[0] <= '9' || word[0] == '-')//存在立即数
 			{
 				new_operation->fimm1 = 1;
-				if (new_operation->tRs1 == 0)
+				if (new_operation->tRs1 != float32)
 					new_operation->imm1 = atoi(word.c_str());
 				else
 					new_operation->imm1 = floatToBinary(atof(word.c_str()));
@@ -769,7 +774,7 @@ void new_xcmp(int op, std::string line, functions* num_func)
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9 || line[p] == 13)
 		{
 			p++;
 			continue;
@@ -779,7 +784,7 @@ void new_xcmp(int op, std::string line, functions* num_func)
 		/*获得单词：除了存在中括号进行括号匹配以外，其他均为读到空格停止*/
 		is_ins = 1;
 		std::string word;
-		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
+		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',' && line[p] != 13)
 		{
 			word.push_back(line[p]);
 			p++;
@@ -807,7 +812,7 @@ void new_xcmp(int op, std::string line, functions* num_func)
 			if (word[0] >= '0' && word[0] <= '9' || word[0] == '-')//存在立即数
 			{
 				new_xcmp->fimm1 = 1;
-				if (new_xcmp->tRs1 == 0)
+				if (new_xcmp->tRs1 != float32)
 					new_xcmp->imm1 = atoi(word.c_str());
 				else
 					new_xcmp->imm1 = floatToBinary(atof(word.c_str()));
@@ -871,7 +876,7 @@ void new_branch(int op, std::string line, functions* num_func)
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9 || line[p] == 13)
 		{
 			p++;
 			continue;
@@ -881,7 +886,7 @@ void new_branch(int op, std::string line, functions* num_func)
 		/*获得单词：除了存在中括号进行括号匹配以外，其他均为读到空格停止*/
 		is_ins = 1;
 		std::string word;
-		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
+		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',' && line[p] != 13)
 		{
 			word.push_back(line[p]);
 			p++;
@@ -944,13 +949,13 @@ void get_instruction_args(instruction* ins, std::string line, functions* num_fun
 	bool last_type = 0;//当前参数类型
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9 || line[p] == 13)
 		{
 			p++;
 			continue;
 		}
 		std::string word;
-		while (p < len && line[p] != ' ' && line[p] != ',')
+		while (p < len && line[p] != ' ' && line[p] != ',' && line[p] != 13)
 		{
 			word.push_back(line[p]);
 			p++;
@@ -963,9 +968,21 @@ void get_instruction_args(instruction* ins, std::string line, functions* num_fun
 		}
 		else//参数名,新增一个局部变量
 		{
-			if (map_global_register.count(word) != 0)
-				ins->formal_num.push_back(map_global_register[word]);
-			else ins->formal_num.push_back(num_func->map_local_register[word]);
+			if ((word[0] >= '0' && word[0] <= '9') || word[0] == '-')//参数为立即数
+			{
+				ins->formal_is_imm.push_back(true);
+				if (last_type == float32)//float
+					ins->formal_num.push_back(floatToBinary(atof(word.c_str())));
+				else//i32
+					ins->formal_num.push_back(atoi(word.c_str()));
+			}
+			else
+			{
+				ins->formal_is_imm.push_back(false);
+				if (map_global_register.count(word) != 0)
+					ins->formal_num.push_back(map_global_register[word]);
+				else ins->formal_num.push_back(num_func->map_local_register[word]);
+			}
 		}
 	}
 }
@@ -981,7 +998,7 @@ void new_call(int op, std::string line, functions* num_func)
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9 || line[p] == 13)
 		{
 			p++;
 			continue;
@@ -991,7 +1008,8 @@ void new_call(int op, std::string line, functions* num_func)
 		/*获得单词：除了存在中括号进行括号匹配以外，其他均为读到空格或者'('停止*/
 		is_ins = 1;
 		std::string word;
-		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',' && line[p] != '(')
+		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ','
+			&& line[p] != '(' && line[p] != 13)
 		{
 			word.push_back(line[p]);
 			p++;
@@ -1000,9 +1018,9 @@ void new_call(int op, std::string line, functions* num_func)
 			continue;
 		if (!fRd)
 		{
-			if (word == "void")
+			if (word == "void" || word == "i32" || word == "float")
 			{
-				new_call->type_ret = 2;
+				new_call->type_ret = ret_void;
 				tRd = 1;
 			}
 			else
@@ -1014,7 +1032,8 @@ void new_call(int op, std::string line, functions* num_func)
 		}
 		else if (!tRd)
 		{
-			new_register->type = new_call->type_ret = ((word == "i32") ? 0 : 1);
+			new_register->type = new_call->type_ret = ((word == "i32") ? ret_i32 : ret_float);
+			new_call->tRd = (word == "i32") ? i32 : float32;
 			tRd = 1;
 		}
 		else if (!name)
@@ -1039,8 +1058,6 @@ void new_call(int op, std::string line, functions* num_func)
 	}
 	if (!is_ins)
 		return;
-	if (!is_ins)
-		return;
 	num_func->cnt_ins++;
 	new_call->num = ++tot_instructions;
 	new_call->op = op;
@@ -1054,7 +1071,10 @@ void new_call(int op, std::string line, functions* num_func)
 	int nw = 0;
 	for (auto it : new_call->formal_num)
 	{
-		printf(";number=%d type=%d\n", it, (new_call->formal_type[nw]) ? 1 : 0);
+		if (new_call->formal_is_imm[nw])
+			printf(";imm=%d type=%d\n", it, (new_call->formal_type[nw]) ? 1 : 0);
+		else
+			printf(";number=%d type=%d\n", it, (new_call->formal_type[nw]) ? 1 : 0);
 		nw++;
 	}
 	printf("\n");
@@ -1071,7 +1091,7 @@ void new_ret(int op, std::string line, functions* num_func)
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9 || line[p] == 13)
 		{
 			p++;
 			continue;
@@ -1081,7 +1101,7 @@ void new_ret(int op, std::string line, functions* num_func)
 		/*获得单词：其他均为读到空格停止*/
 		is_ins = 1;
 		std::string word;
-		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
+		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',' && line[p] != 13)
 		{
 			word.push_back(line[p]);
 			p++;
@@ -1092,10 +1112,10 @@ void new_ret(int op, std::string line, functions* num_func)
 		{
 			if (word == "void")
 			{
-				new_ret->type_ret = 2;
+				new_ret->type_ret = ret_void;
 				break;
 			}
-			else new_ret->type_ret = ((word == "i32") ? 0 : 1);
+			else new_ret->type_ret = ((word == "i32") ? ret_i32 : ret_float);
 			type = 1;
 		}
 		else if (!tRs)
@@ -1103,6 +1123,7 @@ void new_ret(int op, std::string line, functions* num_func)
 			if (map_global_register.count(word) != 0)
 				new_ret->Rs1 = map_global_register[word];
 			else new_ret->Rs1 = num_func->map_local_register[word];
+			new_ret->tRs1 = ((new_ret->type_ret == ret_float) ? float32 : i32);
 			tRs = 1;
 		}
 	}
@@ -1116,7 +1137,7 @@ void new_ret(int op, std::string line, functions* num_func)
 	insert_instruction(num_func, new_ret);
 
 	printf(";type=%d ", new_ret->type_ret);
-	if (new_ret->type_ret != 2)
+	if (new_ret->type_ret != ret_void)
 		printf("number=%d\n", new_ret->Rs1);
 	else printf("\n");
 	printf("\n");
@@ -1129,13 +1150,13 @@ void get_args(functions* new_function, std::string line)
 	bool last_type = 0;//当前参数类型
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == ',')
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 13)
 		{
 			p++;
 			continue;
 		}
 		std::string word;
-		while (p < len && line[p] != ' ' && line[p] != ',')
+		while (p < len && line[p] != ' ' && line[p] != ',' && line[p] != 13)
 		{
 			word.push_back(line[p]);
 			p++;
@@ -1143,7 +1164,7 @@ void get_args(functions* new_function, std::string line)
 		if (word == "i32" || word == "float")//新增一个参数
 		{
 			new_function->total_formal++;
-			new_function->args.push_back((word == "i32") ? 0 : 1);
+			new_function->args.push_back((word == "i32") ? i32 : ((word == "float") ? float32 : i64));
 			last_type = (word == "i32") ? 0 : 1;
 		}
 		else//参数名,新增一个局部寄存器
@@ -1161,13 +1182,14 @@ functions* new_function(std::string line)
 	printf(";%s\n", line.c_str());
 
 	functions* new_function = new functions;
+	new_function->ins_start = tot_instructions + 1;
 	new_function->num = ++tot_functions;
 	bool type = 0, name = 0, args = 0;//标记是否已经找到了函数的type，函数名以及参数
 	int len = line.length();
 	/*先找到除参数列表以外的信息*/
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == ',')
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 13)
 		{
 			p++;
 			continue;
@@ -1176,7 +1198,8 @@ functions* new_function(std::string line)
 			break;
 		/*获得单词：除了存在小括号进行括号匹配以外，其他均为读到空格停止*/
 		std::string word;
-		while (p<len && line[p] != ' ' && line[p] != ';' && line[p] != ',' && line[p] != '(')
+		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ','
+			&& line[p] != '(' && line[p] != 13)
 		{
 			word.push_back(line[p]);
 			p++;
@@ -1243,10 +1266,15 @@ void end_function(functions* now_function)
 		if(head->type==i64)
 			imm += (head->cnt << 2);
 		now_function->imm_local[head->num] = -imm;
-		
 	}
-	imm += (max(now_function->max_formal - 8, 0) + 1) << 2;//计算栈帧大小,多留了4字节
+	imm += (max(now_function->max_formal - 8, 0) + 16) << 2;//计算栈帧大小,多留了24字节
 	now_function->size = imm;
+	head = now_function->local_head;
+	while (head->next != NULL)
+	{
+		head = head->next;
+		now_function->imm_local[head->num] += imm;
+	}
 
 	printf(";size=%d formal_num=%d max_num=%d\n", now_function->size, now_function->total_formal, now_function->max_formal);
 	head = now_function->local_head;
@@ -1264,7 +1292,7 @@ int check_label(std::string s)
 	int len = s.length();
 	for (int p = 0; p < len; ++p)
 	{
-		if (s[p] == ' ' || s[p] == 9)
+		if (s[p] == ' ' || s[p] == 9 || s[p] == 13)
 			continue;
 		if (s[p] == ';')
 			return 0;
@@ -1280,7 +1308,7 @@ std::string get_label(std::string s)
 	std::string ret = "%";
 	for (int p = 0; p < len;)
 	{
-		if (s[p] == ' ' || s[p] == 9)
+		if (s[p] == ' ' || s[p] == 9 || s[p] == 13)
 		{
 			p++;
 			continue;
@@ -1348,7 +1376,7 @@ void new_xtoy(int op,std::string line, functions* num_func)
 	int len = line.length();
 	for (int p = 0; p < len; )
 	{
-		if (line[p] == ' ' || line[p] == ',' || line[p] == 9)
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9 || line[p] == 13)
 		{
 			p++;
 			continue;
@@ -1358,7 +1386,7 @@ void new_xtoy(int op,std::string line, functions* num_func)
 		/*获得单词：除了存在中括号进行括号匹配以外，其他均为读到空格停止*/
 		is_ins = 1;
 		std::string word;
-		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',')
+		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',' && line[p] != 13)
 		{
 			word.push_back(line[p]);
 			p++;
@@ -1381,7 +1409,7 @@ void new_xtoy(int op,std::string line, functions* num_func)
 			if (word[0] >= '0' && word[0] <= '9' || word[0] == '-')//存在立即数
 			{
 				new_xtoy->fimm1 = 1;
-				if (new_xtoy->tRs1 == 0)
+				if (new_xtoy->tRs1 != float32)
 					new_xtoy->imm1 = atoi(word.c_str());
 				else
 					new_xtoy->imm1 = floatToBinary(atof(word.c_str()));
@@ -1417,137 +1445,244 @@ void new_xtoy(int op,std::string line, functions* num_func)
 	printf("\n");
 }
 
+void new_zext(int op, std::string line, functions* num_func)
+{
+
+	printf(";%s\n", line.c_str());
+
+	instruction* new_zext = new instruction;
+	Register_virtual* new_register = new Register_virtual;
+	bool is_ins = 0, fRd = 0, tRd = 0, fRs_imm = 0, tRs_imm = 0;//标记是否已经找到了目的变量及其type，源变量及其type
+	int len = line.length();
+	for (int p = 0; p < len; )
+	{
+		if (line[p] == ' ' || line[p] == ',' || line[p] == 9 || line[p] == 13)
+		{
+			p++;
+			continue;
+		}
+		if (line[p] == ';')
+			break;
+		/*获得单词：除了存在中括号进行括号匹配以外，其他均为读到空格停止*/
+		is_ins = 1;
+		std::string word;
+		while (p < len && line[p] != ' ' && line[p] != ';' && line[p] != ',' && line[p] != 13)
+		{
+			word.push_back(line[p]);
+			p++;
+		}
+		if (word == "=" || word == "zext" || word == "to")
+			continue;
+		if (!fRd)
+		{
+			get_new_register(new_register, word, num_func);
+			new_zext->Rd = new_register->num;
+			fRd = 1;
+		}
+		else if (!tRs_imm)
+		{
+			new_zext->tRs1 = ((word == "i32") ? 0 : ((word == "float") ? 1 : 2));
+			tRs_imm = 1;
+		}
+		else if (!fRs_imm)
+		{
+			if ((word[0] >= '0' && word[0] <= '9') || word[0] == '-')
+			{
+				new_zext->fimm1 = 1;
+				if (new_zext->tRs1 != float32)
+					new_zext->imm1 = atoi(word.c_str());
+				else
+					new_zext->imm1 = floatToBinary(atof(word.c_str()));
+
+			}
+			else
+			{
+				new_zext->fimm1 = 0;
+				if (map_global_register.count(word) != 0)
+					new_zext->Rs1 = map_global_register[word];
+				else
+					new_zext->Rs1 = num_func->map_local_register[word];
+			}
+			fRs_imm = 1;
+		}
+		else if (!tRd)
+		{
+			new_zext->tRd = ((word == "i32") ? 0 : ((word == "float") ? 1 : 2));
+			new_register->type = new_zext->tRd;
+			tRd = 1;
+		}
+	}
+	if (!is_ins)
+		return;
+	num_func->cnt_ins++;
+	new_zext->num = ++tot_instructions;
+	new_zext->op = op;
+	insert_instruction(num_func, new_zext);
+
+	printf(";Rd=%d type=%d ", new_zext->Rd, new_zext->tRd);
+	if (new_zext->fimm)
+	{
+		printf("imm=%u type=%d", new_zext->imm, new_zext->tRs1);
+	}
+	else
+	{
+		printf("Rs=%d type=%d", new_zext->Rs1, new_zext->tRs1);
+	}
+	printf("\n\n");
+
+}
+
 void read(int option, std::string line, functions* num_func, bool in_func)//读入
 {
 	switch (option)
 	{
-		case 0://global语句
+		case ins_global://global语句
 		{
-			new_variable(0, line, global_tail);//新建一个全局变量
+			new_variable(0, line);//新建一个全局变量
 			break;
 		}
-		case 1://load语句
+		case ins_load://load语句
 		{
 			new_load(option, line, num_func);
 			break;
 		}
-		case 2://store语句
+		case ins_store://store语句
 		{
 			new_store(option, line, num_func);
 			break;
 		}
-		case 3://alloca语句
+		case ins_alloca://alloca语句
 		{
-			new_variable(1, line, num_func->local_tail, num_func);
+			new_variable(1, line, num_func);
 			break;
 		}
-		case 4://GEP语句
+		case ins_getelementptr://GEP语句
 		{
 			new_GEP(option, line, num_func);
 			break;
 		}
-		case 5://add语句
+		case ins_add://add语句
 		{
 			new_operation(option, line, num_func);
 			break;
 		}
-		case 6://fadd语句
+		case ins_fadd://fadd语句
 		{
 			new_operation(option, line, num_func);
 			break;
 		}
-		case 7://sub语句
+		case ins_sub://sub语句
 		{
 			new_operation(option, line, num_func);
 			break;
 		}
-		case 8://fsub语句
+		case ins_fsub://fsub语句
 		{
 			new_operation(option, line, num_func);
 			break;
 		}
-		case 9://mul语句
+		case ins_mul://mul语句
 		{
 			new_operation(option, line, num_func);
 			break;
 		}
-		case 10://fmul语句
+		case ins_fmul://fmul语句
 		{
 			new_operation(option, line, num_func);
 			break;
 		}
-		case 11://sdiv语句
+		case ins_sdiv://sdiv语句
 		{
 			new_operation(option, line, num_func);
 			break;
 		}
-		case 12://fdiv语句
+		case ins_fdiv://fdiv语句
 		{
 			new_operation(option, line, num_func);
 			break;
 		
 		}
-		case 13://srem语句
+		case ins_srem://srem语句
 		{
 			new_operation(option, line, num_func);
 			break;
 		}
-		case 14://frem语句
+		case ins_frem://frem语句
 		{
 			new_operation(option, line, num_func);
 			break;
 		}
-		case 15://fneg语句
+		case ins_and://and语句
 		{
 			new_operation(option, line, num_func);
 			break;
 		}
-		case 16://icmp语句
+		case ins_or://or语句
+		{
+			new_operation(option, line, num_func);
+			break;
+		}
+		case ins_xor://xor语句
+		{
+			new_operation(option, line, num_func);
+			break;
+		}
+		case ins_fneg://fneg语句
+		{
+			new_operation(option, line, num_func);
+			break;
+		}
+		case ins_icmp://icmp语句
 		{
 			new_xcmp(option, line, num_func);
 			break;
 		}
-		case 17://fcmp语句
+		case ins_fcmp://fcmp语句
 		{
 			new_xcmp(option, line, num_func);
 			break;
 		}
-		case 18://br语句
+		case ins_br://br语句
 		{
 			new_branch(option, line, num_func);
 			break;
 		}
-		case 19:
+		case ins_define:
 		{
 			break;
 		}
-		case 20://call语句
+		case ins_call://call语句
 		{
 			new_call(option, line, num_func);
 			break;
 		}
-		case 21://ret语句
+		case ins_ret://ret语句
 		{
 			new_ret(option, line, num_func);
 			break;
 		}
-		case 22:
+		case ins_label:
 		{
 			break;
 		}
-		case 23://unreachable语句
+		case ins_unreachable://unreachable语句
 		{
 			new_unreachable(option, line, num_func);
 			break;
 		}
-		case 24://sitofp语句
+		case ins_sitofp://sitofp语句
 		{
 			new_xtoy(option, line, num_func);
 			break;
 		}
-		case 25://fptosi语句
+		case ins_fptosi://fptosi语句
 		{
 			new_xtoy(option, line, num_func);
+			break;
+		}
+		case ins_zext://zext语句
+		{
+			new_zext(option, line, num_func);
 			break;
 		}
 	}

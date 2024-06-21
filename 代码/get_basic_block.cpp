@@ -104,7 +104,9 @@ void get_basic_block(functions* now_func)
 			{
 				add_edge(bb_head, label_bb[ins_head->L1]);
 				if (ins_head->branch_flag)//Ìõ¼þÌø×ª
+				{
 					add_edge(bb_head, label_bb[ins_head->L2]);
+				}
 			}
 			ins_head = ins_head->next;
 		}

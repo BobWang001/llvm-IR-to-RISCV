@@ -1,0 +1,774 @@
+;@b = global float -114.514
+;register_name=@b,number=1,type=2
+;variable_name=@b,number=1,type=1,dim=0,cnt=1
+;size: 
+;val: 3269789483 
+
+;@a = global [5 x [3 x [2 x i32]]] 
+;register_name=@a,number=2,type=2
+;variable_name=@a,number=2,type=0,dim=3,cnt=30
+;size: 5 3 2 
+;val: 
+
+;define i32 @add(i32 %0, i32 %1) {
+;name=@add number=1 formal=2
+;type: 0 0 
+
+;  call i32 @add(i32 114514, i32 1919810)
+;type=2 arg_cnt=2 
+;imm=114514 type=0
+;imm=1919810 type=0
+
+;  %3 = alloca i32
+;register_name=%3,number=5,type=2
+;variable_name=%3,number=32,type=0,dim=0,cnt=1
+;size: 
+;val: 
+
+;  %4 = alloca i32
+;register_name=%4,number=6,type=2
+;variable_name=%4,number=33,type=0,dim=0,cnt=1
+;size: 
+;val: 
+
+;  %5 = alloca i32
+;register_name=%5,number=7,type=2
+;variable_name=%5,number=34,type=0,dim=0,cnt=1
+;size: 
+;val: 
+
+;  store i32 %0, i32* %3
+;Rd=5 type=0 Rs=3 type=0
+
+;  store i32 %1, i32* %4
+;Rd=6 type=0 Rs=4 type=0
+
+;  %6 = load i32, i32* %3
+;Rd=8 type=0 Rs=5 type=0 
+
+;  %7 = load i32, i32* %4
+;Rd=9 type=0 Rs=6 type=0 
+
+;  %8 = add i32 %6, %7
+;Rd=10 Rs1=8 Rs2=9 type=0
+
+;  store i32 %8, i32* %5
+;Rd=7 type=0 Rs=10 type=0
+
+;  %9 = load i32, i32* %5
+;Rd=11 type=0 Rs=7 type=0 
+
+;  %10 = load i32, i32* %4
+;Rd=12 type=0 Rs=6 type=0 
+
+;  %11 = sub i32 %9, %10
+;Rd=13 Rs1=11 Rs2=12 type=0
+
+;  store i32 %11, i32* %5
+;Rd=7 type=0 Rs=13 type=0
+
+;  %12 = load i32, i32* %5
+;Rd=14 type=0 Rs=7 type=0 
+
+;  %13 = load i32, i32* %4
+;Rd=15 type=0 Rs=6 type=0 
+
+;  %14 = add i32 %12, %13
+;Rd=16 Rs1=14 Rs2=15 type=0
+
+;  store i32 %14, i32* %5
+;Rd=7 type=0 Rs=16 type=0
+
+;  %15 = load i32, i32* %5
+;Rd=17 type=0 Rs=7 type=0 
+
+;  ret i32 %15 
+;type=0 number=17
+
+;name=@add number_of_bbs=3
+;bb_number=0 l=0 r=0 edges:num=1 
+;bb_number=1 l=1 r=20 edges:num=2 
+;bb_number=2 l=0 r=0 edges:
+
+;reg_name=%0 reg_number=3 live_intervals: [1,5] 
+;spliting_weight=1 prod_value=5 physical_reg=29
+
+;reg_name=%1 reg_number=4 live_intervals: [1,6] 
+;spliting_weight=1 prod_value=6 physical_reg=28
+
+;reg_name=%3 reg_number=5 live_intervals: [2,7] 
+;spliting_weight=3 prod_value=6 physical_reg=7
+
+;reg_name=%4 reg_number=6 live_intervals: [3,16] 
+;spliting_weight=5 prod_value=14 physical_reg=6
+
+;reg_name=%5 reg_number=7 live_intervals: [4,19] 
+;spliting_weight=7 prod_value=16 physical_reg=5
+
+;reg_name=%6 reg_number=8 live_intervals: [7,9] 
+;spliting_weight=2 prod_value=3 physical_reg=29
+
+;reg_name=%7 reg_number=9 live_intervals: [8,9] 
+;spliting_weight=2 prod_value=2 physical_reg=9
+
+;reg_name=%8 reg_number=10 live_intervals: [9,10] 
+;spliting_weight=2 prod_value=2 physical_reg=8
+
+;reg_name=%9 reg_number=11 live_intervals: [11,13] 
+;spliting_weight=2 prod_value=3 physical_reg=28
+
+;reg_name=%10 reg_number=12 live_intervals: [12,13] 
+;spliting_weight=2 prod_value=2 physical_reg=31
+
+;reg_name=%11 reg_number=13 live_intervals: [13,14] 
+;spliting_weight=2 prod_value=2 physical_reg=30
+
+;reg_name=%12 reg_number=14 live_intervals: [15,17] 
+;spliting_weight=2 prod_value=3 physical_reg=7
+
+;reg_name=%13 reg_number=15 live_intervals: [16,17] 
+;spliting_weight=2 prod_value=2 physical_reg=29
+
+;reg_name=%14 reg_number=16 live_intervals: [17,18] 
+;spliting_weight=2 prod_value=2 physical_reg=28
+
+;reg_name=%15 reg_number=17 live_intervals: [19,20] 
+;spliting_weight=2 prod_value=2 physical_reg=6
+
+
+;define float @mul(float %0, float %1) {
+;name=@mul number=2 formal=2
+;type: 1 1 
+
+;  %3 = alloca float
+;register_name=%3,number=20,type=2
+;variable_name=%3,number=35,type=1,dim=0,cnt=1
+;size: 
+;val: 
+
+;  %4 = alloca float
+;register_name=%4,number=21,type=2
+;variable_name=%4,number=36,type=1,dim=0,cnt=1
+;size: 
+;val: 
+
+;  %5 = alloca float
+;register_name=%5,number=22,type=2
+;variable_name=%5,number=37,type=1,dim=0,cnt=1
+;size: 
+;val: 
+
+;  store float %0, float* %3
+;Rd=20 type=1 Rs=18 type=1
+
+;  store float %1, float* %4
+;Rd=21 type=1 Rs=19 type=1
+
+;  %6 = load float, float* %3
+;Rd=23 type=1 Rs=20 type=1 
+
+;  %7 = load float, float* %4
+;Rd=24 type=1 Rs=21 type=1 
+
+;  %8 = mul float %6, %7
+;Rd=25 Rs1=23 Rs2=24 type=1
+
+;  store float %8, float* %5
+;Rd=22 type=1 Rs=25 type=1
+
+;  %9 = load float, float* %5
+;Rd=26 type=1 Rs=22 type=1 
+
+;  ret float %9
+;type=1 number=26
+
+;name=@mul number_of_bbs=3
+;bb_number=0 l=0 r=0 edges:num=1 
+;bb_number=1 l=21 r=31 edges:num=2 
+;bb_number=2 l=0 r=0 edges:
+
+;reg_name=%0 reg_number=18 live_intervals: [21,24] 
+;spliting_weight=1 prod_value=4 physical_reg=33
+
+;reg_name=%1 reg_number=19 live_intervals: [21,25] 
+;spliting_weight=1 prod_value=5 physical_reg=32
+
+;reg_name=%3 reg_number=20 live_intervals: [21,26] 
+;spliting_weight=3 prod_value=6 physical_reg=7
+
+;reg_name=%4 reg_number=21 live_intervals: [22,27] 
+;spliting_weight=3 prod_value=6 physical_reg=6
+
+;reg_name=%5 reg_number=22 live_intervals: [23,30] 
+;spliting_weight=3 prod_value=8 physical_reg=5
+
+;reg_name=%6 reg_number=23 live_intervals: [26,28] 
+;spliting_weight=2 prod_value=3 physical_reg=32
+
+;reg_name=%7 reg_number=24 live_intervals: [27,28] 
+;spliting_weight=2 prod_value=2 physical_reg=34
+
+;reg_name=%8 reg_number=25 live_intervals: [28,29] 
+;spliting_weight=2 prod_value=2 physical_reg=33
+
+;reg_name=%9 reg_number=26 live_intervals: [30,31] 
+;spliting_weight=2 prod_value=2 physical_reg=32
+
+
+;define void @fibonacci() {
+;name=@fibonacci number=3 formal=0
+;type: 
+
+;  %1 = alloca i32
+;register_name=%1,number=27,type=2
+;variable_name=%1,number=38,type=0,dim=0,cnt=1
+;size: 
+;val: 
+
+;  %2 = alloca i32
+;register_name=%2,number=28,type=2
+;variable_name=%2,number=39,type=0,dim=0,cnt=1
+;size: 
+;val: 
+
+;  %3 = alloca i32
+;register_name=%3,number=29,type=2
+;variable_name=%3,number=40,type=0,dim=0,cnt=1
+;size: 
+;val: 
+
+;  %4 = alloca i32
+;register_name=%4,number=30,type=2
+;variable_name=%4,number=41,type=0,dim=0,cnt=1
+;size: 
+;val: 
+
+;  store i32 1, i32* %1
+;Rd=27 type=0 imm=1 type=0
+
+;  store i32 1, i32* %2
+;Rd=28 type=0 imm=1 type=0
+
+;  store i32 1, i32* %4
+;Rd=30 type=0 imm=1 type=0
+
+;  br label %5
+;contion=0 label1=1 
+
+;%5:
+;num=1
+
+;  %6 = load i32, i32* %4
+;Rd=31 type=0 Rs=30 type=0 
+
+;  %7 = icmp sle i32 %6, 10
+;Rd=32 Rs1=31 imm2=10 cond=5 type=0
+
+;  br i1 %7, label %8, label %17
+;contion=1 i1=32 label1=2 label2=4 
+
+;%8:
+;num=2
+
+;  %9 = load i32, i32* %1
+;Rd=33 type=0 Rs=27 type=0 
+
+;  store i32 %9, i32* %3
+;Rd=29 type=0 Rs=33 type=0
+
+;  %10 = load i32, i32* %1
+;Rd=34 type=0 Rs=27 type=0 
+
+;  %11 = load i32, i32* %2
+;Rd=35 type=0 Rs=28 type=0 
+
+;  %12 = add i32 %10, %11
+;Rd=36 Rs1=34 Rs2=35 type=0
+
+;  store i32 %12, i32* %1
+;Rd=27 type=0 Rs=36 type=0
+
+;  %13 = load i32, i32* %3
+;Rd=37 type=0 Rs=29 type=0 
+
+;  store i32 %13, i32* %2
+;Rd=28 type=0 Rs=37 type=0
+
+;  br label %14
+;contion=0 label1=3 
+
+;%14:
+;num=3
+
+;  %15 = load i32, i32* %4
+;Rd=38 type=0 Rs=30 type=0 
+
+;  %16 = add i32 %15, 1
+;Rd=39 Rs1=38 imm2=1 type=0
+
+;  store i32 %16, i32* %4
+;Rd=30 type=0 Rs=39 type=0
+
+;  br label %5
+;contion=0 label1=1 
+
+;%17:
+;num=4
+
+;  ret void
+;type=2 
+
+;name=@fibonacci number_of_bbs=7
+;bb_number=0 l=0 r=0 edges:num=1 
+;bb_number=1 l=32 r=39 edges:num=2 
+;bb_number=2 l=40 r=43 edges:num=3 num=5 
+;bb_number=3 l=44 r=53 edges:num=4 
+;bb_number=4 l=54 r=58 edges:num=2 
+;bb_number=5 l=59 r=60 edges:num=6 
+;bb_number=6 l=0 r=0 edges:
+
+;reg_name=%1 reg_number=27 live_intervals: [32,50] 
+;spliting_weight=23 prod_value=19 physical_reg=7
+
+;reg_name=%2 reg_number=28 live_intervals: [33,52] 
+;spliting_weight=16 prod_value=20 physical_reg=6
+
+;reg_name=%3 reg_number=29 live_intervals: [34,51] 
+;spliting_weight=15 prod_value=18 physical_reg=28
+
+;reg_name=%4 reg_number=30 live_intervals: [35,57] 
+;spliting_weight=26 prod_value=23 physical_reg=5
+
+;reg_name=%6 reg_number=31 live_intervals: [41,42] 
+;spliting_weight=6 prod_value=2 physical_reg=18
+
+;reg_name=%7 reg_number=32 live_intervals: [42,43] 
+;spliting_weight=6 prod_value=2 physical_reg=9
+
+;reg_name=%9 reg_number=33 live_intervals: [45,46] 
+;spliting_weight=6 prod_value=2 physical_reg=8
+
+;reg_name=%10 reg_number=34 live_intervals: [47,49] 
+;spliting_weight=6 prod_value=3 physical_reg=29
+
+;reg_name=%11 reg_number=35 live_intervals: [48,49] 
+;spliting_weight=6 prod_value=2 physical_reg=31
+
+;reg_name=%12 reg_number=36 live_intervals: [49,50] 
+;spliting_weight=6 prod_value=2 physical_reg=30
+
+;reg_name=%13 reg_number=37 live_intervals: [51,52] 
+;spliting_weight=6 prod_value=2 physical_reg=29
+
+;reg_name=%15 reg_number=38 live_intervals: [55,56] 
+;spliting_weight=6 prod_value=2 physical_reg=7
+
+;reg_name=%16 reg_number=39 live_intervals: [56,57] 
+;spliting_weight=6 prod_value=2 physical_reg=6
+
+
+;define i32 @main() {
+;name=@main number=4 formal=0
+;type: 
+
+;  %1 = alloca i32
+;register_name=%1,number=40,type=2
+;variable_name=%1,number=42,type=0,dim=0,cnt=1
+;size: 
+;val: 
+
+;  %2 = alloca i32
+;register_name=%2,number=41,type=2
+;variable_name=%2,number=43,type=0,dim=0,cnt=1
+;size: 
+;val: 
+
+;  %3 = alloca i32
+;register_name=%3,number=42,type=2
+;variable_name=%3,number=44,type=0,dim=0,cnt=1
+;size: 
+;val: 
+
+;  %4 = alloca [3 x [2 x float]]
+;register_name=%4,number=43,type=2
+;variable_name=%4,number=45,type=1,dim=2,cnt=6
+;size: 3 2 
+;val: 
+
+;  store i32 0, i32* %1
+;Rd=40 type=0 imm=0 type=0
+
+;  store i32 -101, i32* %3
+;Rd=42 type=0 imm=4294967195 type=0
+
+;  %5 = load i32, i32* getelementptr ([5 x [3 x [2 x i32]]], [5 x [3 x [2 x i32]]]* @a, i32 0, i32 1, i32 2, i32 1)
+;Rd=44 type=0 Rs=2 type=0 imm=11
+
+;  %6 = icmp eq i32 %5, 1
+;Rd=45 Rs1=44 imm2=1 cond=0 type=0
+
+;  br i1 %6, label %7, label %11
+;contion=1 i1=45 label1=5 label2=6 
+
+;%7:
+;num=5
+
+;  %8 = load i32, i32* getelementptr ([5 x [3 x [2 x i32]]], [5 x [3 x [2 x i32]]]* @a, i32 0, i32 1, i32 2, i32 0)
+;Rd=46 type=0 Rs=2 type=0 imm=10
+
+;  %9 = load i32, i32* getelementptr ([5 x [3 x [2 x i32]]], [5 x [3 x [2 x i32]]]* @a, i32 0, i32 2, i32 1, i32 0)
+;Rd=47 type=0 Rs=2 type=0 imm=14
+
+;  %10 = call i32 @add(i32 %8, i32 %9)
+;type=0 arg_cnt=2 ret_num=48
+;number=46 type=0
+;number=47 type=0
+
+;  store i32 %10, i32* %2
+;Rd=41 type=0 Rs=48 type=0
+
+;  br label %15
+;contion=0 label1=7 
+
+;%11:
+;num=6
+
+;  %12 = load i32, i32* getelementptr ([5 x [3 x [2 x i32]]], [5 x [3 x [2 x i32]]]* @a, i32 0, i32 0, i32 2, i32 0)
+;Rd=49 type=0 Rs=2 type=0 imm=4
+
+;  %13 = load i32, i32* %3
+;Rd=50 type=0 Rs=42 type=0 
+
+;  %14 = call i32 @add(i32 %12, i32 %13)
+;type=0 arg_cnt=2 ret_num=51
+;number=49 type=0
+;number=50 type=0
+
+;  store i32 %14, i32* %2
+;Rd=41 type=0 Rs=51 type=0
+
+;  br label %15
+;contion=0 label1=7 
+
+;%15:
+;num=7
+
+;  call void @fibonacci()
+;type=2 arg_cnt=0 
+
+;  %16 = load i32, i32* %1
+;Rd=52 type=0 Rs=40 type=0 
+
+;  ret i32 %16
+;type=0 number=52
+
+;name=@main number_of_bbs=6
+;bb_number=0 l=0 r=0 edges:num=1 
+;bb_number=1 l=61 r=69 edges:num=2 num=3 
+;bb_number=2 l=70 r=75 edges:num=4 
+;bb_number=3 l=76 r=81 edges:num=4 
+;bb_number=4 l=82 r=85 edges:num=5 
+;bb_number=5 l=0 r=0 edges:
+
+;reg_name=%1 reg_number=40 live_intervals: [61,84] 
+;spliting_weight=6 prod_value=24 physical_reg=5
+
+;reg_name=%2 reg_number=41 live_intervals: [62,74] [76,80] 
+;spliting_weight=6 prod_value=18 physical_reg=6
+
+;reg_name=%3 reg_number=42 live_intervals: [63,69] [76,78] 
+;spliting_weight=4 prod_value=10 physical_reg=7
+
+;reg_name=%4 reg_number=43 live_intervals: 
+;spliting_weight=0 prod_value=0 physical_reg=5
+
+;reg_name=%5 reg_number=44 live_intervals: [67,68] 
+;spliting_weight=2 prod_value=2 physical_reg=9
+
+;reg_name=%6 reg_number=45 live_intervals: [68,69] 
+;spliting_weight=2 prod_value=2 physical_reg=8
+
+;reg_name=%8 reg_number=46 live_intervals: [71,73] 
+;spliting_weight=1 prod_value=3 physical_reg=29
+
+;reg_name=%9 reg_number=47 live_intervals: [72,73] 
+;spliting_weight=1 prod_value=2 physical_reg=31
+
+;reg_name=%10 reg_number=48 live_intervals: [73,74] 
+;spliting_weight=2 prod_value=2 physical_reg=30
+
+;reg_name=%12 reg_number=49 live_intervals: [77,79] 
+;spliting_weight=1 prod_value=3 physical_reg=28
+
+;reg_name=%13 reg_number=50 live_intervals: [78,79] 
+;spliting_weight=1 prod_value=2 physical_reg=29
+
+;reg_name=%14 reg_number=51 live_intervals: [79,80] 
+;spliting_weight=2 prod_value=2 physical_reg=7
+
+;reg_name=%16 reg_number=52 live_intervals: [84,85] 
+;spliting_weight=2 prod_value=2 physical_reg=6
+
+
+;size=164 formal_num=2 max_num=2
+;name=%3 num=32 imm=144
+;name=%4 num=33 imm=140
+;name=%5 num=34 imm=136
+;name=p5 num=51 imm=128
+;name=p6 num=52 imm=120
+;name=p7 num=53 imm=112
+;name=p8 num=54 imm=104
+;name=p9 num=55 imm=96
+;name=p28 num=56 imm=88
+;name=p29 num=57 imm=80
+;name=p30 num=58 imm=72
+;name=p31 num=59 imm=64
+
+;size=140 formal_num=2 max_num=0
+;name=%3 num=35 imm=120
+;name=%4 num=36 imm=116
+;name=%5 num=37 imm=112
+;name=p5 num=60 imm=104
+;name=p6 num=61 imm=96
+;name=p7 num=62 imm=88
+;name=p32 num=63 imm=80
+;name=p33 num=64 imm=72
+;name=p34 num=65 imm=64
+
+;size=168 formal_num=0 max_num=0
+;name=%1 num=38 imm=148
+;name=%2 num=39 imm=144
+;name=%3 num=40 imm=140
+;name=%4 num=41 imm=136
+;name=p5 num=66 imm=128
+;name=p6 num=67 imm=120
+;name=p7 num=68 imm=112
+;name=p8 num=69 imm=104
+;name=p9 num=70 imm=96
+;name=p28 num=71 imm=88
+;name=p29 num=72 imm=80
+;name=p30 num=73 imm=72
+;name=p31 num=74 imm=64
+
+;size=172 formal_num=0 max_num=2
+;name=%1 num=42 imm=152
+;name=%2 num=43 imm=148
+;name=%3 num=44 imm=144
+;name=%4 num=45 imm=120
+;name=p5 num=75 imm=112
+;name=p6 num=76 imm=104
+;name=p7 num=77 imm=96
+;name=p28 num=78 imm=88
+;name=p29 num=79 imm=80
+;name=p30 num=80 imm=72
+;name=p31 num=81 imm=64
+
+G1:
+    word. 3269789483
+G2:
+    zero. 30
+F1:
+    addi sp,sp,-164
+    sd s0,104(sp)
+    sd s1,96(sp)
+    sd ra,156(sp)
+    sd s0,148(sp)
+    addi s0,sp,164
+    mv t4,a0
+    mv t3,a1
+    sd t0,128(sp)
+    sd t1,120(sp)
+    sd t2,112(sp)
+    sd t3,88(sp)
+    sd t4,80(sp)
+    sd t5,72(sp)
+    sd t6,64(sp)
+    li a0,114514
+    li a1,1919810
+    call F1
+    ld t0,128(sp)
+    ld t1,120(sp)
+    ld t2,112(sp)
+    ld t3,88(sp)
+    ld t4,80(sp)
+    ld t5,72(sp)
+    ld t6,64(sp)
+    addi t2,sp,144
+    addi t1,sp,140
+    addi t0,sp,136
+    sw t4,0(t2)
+    sw t3,0(t1)
+    lw t4,0(t2)
+    lw s1,0(t1)
+    addw s0,t4,s1
+    sw s0,0(t0)
+    lw t3,0(t0)
+    lw t6,0(t1)
+    subw t5,t3,t6
+    sw t5,0(t0)
+    lw t2,0(t0)
+    lw t4,0(t1)
+    addw t3,t2,t4
+    sw t3,0(t0)
+    lw t1,0(t0)
+    mv a0,t1
+    ld s0,104(sp)
+    ld s1,96(sp)
+    ld ra,156(sp)
+    ld s0,148(sp)
+    addi sp,sp,164
+    jr ra
+F2:
+    addi sp,sp,-140
+    sd ra,132(sp)
+    sd s0,124(sp)
+    addi s0,sp,140
+    fadd.s ft1,fa0,zero
+    fadd.s ft0,fa1,zero
+    addi t2,sp,120
+    addi t1,sp,116
+    addi t0,sp,112
+    fsw ft1,0(t2)
+    fsw ft0,0(t1)
+    flw ft0,0(t2)
+    flw ft2,0(t1)
+    fsw ft1,0(t0)
+    flw ft0,0(t0)
+    fadd.s fa0,ft0,zero
+    ld ra,132(sp)
+    ld s0,124(sp)
+    addi sp,sp,140
+    jr ra
+F3:
+    addi sp,sp,-168
+    sd s0,104(sp)
+    sd s1,96(sp)
+    sd ra,160(sp)
+    sd s0,152(sp)
+    addi s0,sp,168
+    addi t2,sp,148
+    addi t1,sp,144
+    addi t3,sp,140
+    addi t0,sp,136
+    li t2,1
+    li t1,1
+    li t0,1
+    j L1
+L1:
+    lw s2,0(t0)
+    li t0,10
+    sd t0,16(sp)
+    ble s2,t0,L2
+    j L4
+    ld t0,16(sp)
+L2:
+    lw s0,0(t2)
+    sw s0,0(t3)
+    lw t4,0(t2)
+    lw t6,0(t1)
+    addw t5,t4,t6
+    sw t5,0(t2)
+    lw t4,0(t3)
+    sw t4,0(t1)
+    j L3
+L3:
+    lw t2,0(t0)
+    addiw t1,t2,1
+    sw t1,0(t0)
+    j L1
+L4:
+    ld s0,104(sp)
+    ld s1,96(sp)
+    ld ra,160(sp)
+    ld s0,152(sp)
+    addi sp,sp,168
+    jr ra
+F4:
+    addi sp,sp,-172
+    sd ra,164(sp)
+    sd s0,156(sp)
+    addi s0,sp,172
+    addi t0,sp,152
+    addi t1,sp,148
+    addi t2,sp,144
+    addi t0,sp,120
+    li t0,0
+    li t2,-101
+    la ra,G0
+    lw s1,11(ra)
+    li a0,1
+    sd a0,16(sp)
+    beq s1,a0,L5
+    j L6
+    ld a0,16(sp)
+L5:
+    la ra,G0
+    lw t4,10(ra)
+    la ra,G0
+    lw t6,14(ra)
+    sd t0,112(sp)
+    sd t1,104(sp)
+    sd t2,96(sp)
+    sd t3,88(sp)
+    sd t4,80(sp)
+    sd t5,72(sp)
+    sd t6,64(sp)
+    mv a0,t4
+    mv a1,t6
+    call F1
+    mv t5,a0
+    ld t0,112(sp)
+    ld t1,104(sp)
+    ld t2,96(sp)
+    ld t3,88(sp)
+    ld t4,80(sp)
+    ld t5,72(sp)
+    ld t6,64(sp)
+    sw t5,0(t1)
+    j L7
+L6:
+    la ra,G0
+    lw t3,4(ra)
+    lw t4,0(t2)
+    sd t0,112(sp)
+    sd t1,104(sp)
+    sd t2,96(sp)
+    sd t3,88(sp)
+    sd t4,80(sp)
+    sd t5,72(sp)
+    sd t6,64(sp)
+    mv a0,t3
+    mv a1,t4
+    call F1
+    mv t2,a0
+    ld t0,112(sp)
+    ld t1,104(sp)
+    ld t2,96(sp)
+    ld t3,88(sp)
+    ld t4,80(sp)
+    ld t5,72(sp)
+    ld t6,64(sp)
+    sw t2,0(t1)
+    j L7
+L7:
+    sd t0,112(sp)
+    sd t1,104(sp)
+    sd t2,96(sp)
+    sd t3,88(sp)
+    sd t4,80(sp)
+    sd t5,72(sp)
+    sd t6,64(sp)
+    call F3
+    ld t0,112(sp)
+    ld t1,104(sp)
+    ld t2,96(sp)
+    ld t3,88(sp)
+    ld t4,80(sp)
+    ld t5,72(sp)
+    ld t6,64(sp)
+    lw t1,0(t0)
+    mv a0,t1
+    ld ra,164(sp)
+    ld s0,156(sp)
+    addi sp,sp,172
+    jr ra

@@ -8,6 +8,7 @@ extern set<int>ins_definied;//会定义虚拟寄存器的指令(除call)
 extern set<int>ins_used;//会使用虚拟寄存器的指令
 extern vector<bool>physical_reg_usable[2];//物理寄存器能否使用
 extern vector<int>physical_reg_order[2];//考虑分配物理寄存器的顺序
+extern vector<int>physical_reg_saved[2];//special,caller_saved,callee_saved
 extern map<int, instruction*>map_instruction_position;//指令编号到指针的映射
 extern set<int>ins_valuate;//会对Rd赋值的指令
 extern map<int, pair<int, int> >map_ins_copy;//记录copy指令的位置
@@ -30,6 +31,9 @@ void allocate_clear()
 		reg[0][i].occupied.clear();
 		reg[1][i].occupied.clear();
 	}
+	while (allocate_queue.size())
+		allocate_queue.pop();
+	allocated_reg.clear();
 }
 
 bool cmp_reg(pair<int,int>a, pair<int,int>b)
@@ -179,6 +183,7 @@ bool intersect(Register_virtual* now_reg, vector<pair<int, int> >reg_interval,
 /*分配物理寄存器*/
 void allocate(Register_virtual* now_reg, Register_physical& physical_reg, int num_reg)
 {
+	now_reg->is_allocated = true;
 	now_reg->reg_phisical = num_reg;
 	for (auto it : now_reg->live_interval)
 		physical_reg.occupied.push_back({ it.first,it.second });
@@ -189,7 +194,7 @@ void allocate(Register_virtual* now_reg, Register_physical& physical_reg, int nu
 /*尝试分配寄存器*/
 bool try_assign(Register_virtual* now_reg, functions* now_func)
 {
-	int op = (now_reg->type) ? 1 : 0;
+	int op = (now_reg->type == float32) ? 1 : 0;
 	for (auto it : physical_reg_order[op])
 	{
 		if (physical_reg_usable[op][it] == false)
@@ -233,7 +238,7 @@ vector<pair<int, int> >get_new_interval(Register_virtual* now_reg,
 /*尝试弹出一个spliting weight较小的寄存器*/
 bool try_evction(Register_virtual* now_reg, functions* now_func)
 {
-	int op = (now_reg->type) ? 1 : 0;
+	int op = (now_reg->type == float32) ? 1 : 0;
 	for (auto it : allocated_reg)
 	{
 		Register_virtual* it_reg = map_local_register_position[it];
@@ -325,9 +330,27 @@ void add_new_register(Register_virtual* new_register, Register_virtual* now_regi
 	new_register->is_splited_from = now_register->num;
 	now_func->map_local_register_position[new_register->num] = new_register;
 	map_local_register_position[new_register->num] = new_register;
+	if (map_register_local_alloca.count(now_register->num) != 0)
+		map_register_local_alloca[new_register->num] = map_register_local_alloca[now_register->num];
 	now_func->reg_tail->next = new_register;
 	now_func->reg_tail = new_register;
 	allocate_queue.push({ new_register->prod,new_register->num });
+}
+
+void reg_copy(Register_virtual* now_register, Register_virtual* new_register)
+{
+	now_register->is_allocated = new_register->is_allocated;
+	now_register->is_spilled = new_register->is_spilled;
+	now_register->is_splited = new_register->is_splited;
+	now_register->is_splited_from = new_register->is_splited_from;
+	now_register->live_interval = new_register->live_interval;
+	now_register->name = new_register->name;
+	now_register->num = new_register->num;
+	now_register->prod = new_register->prod;
+	now_register->reg_phisical = new_register->reg_phisical;
+	now_register->spliting_weight = new_register->spliting_weight;
+	now_register->type = new_register->type;
+	now_register->used = new_register->used;
 }
 
 /*替换指令相关的寄存器*/
@@ -361,8 +384,37 @@ void change_instruction(Register_virtual* now_register, Register_virtual* new_re
 			}
 			if (ins_head->num > r)
 				break;
+			if (ins_head->op == ins_call)
+			{
+				for (int i = 0; i < ins_head->formal_num.size(); ++i)
+				{
+					if (ins_head->formal_is_imm[i] == true)
+						continue;
+					if (ins_head->formal_num[i] == now_register->num)
+						ins_head->formal_num[i] = new_register->num;
+				}
+			}
 		}
 	}
+	Register_virtual* formal_arg = now_func->reg_head;
+	while (formal_arg->next != NULL)
+	{
+		formal_arg = formal_arg->next;
+		if (formal_arg->num == now_register->num)
+			reg_copy(formal_arg, new_register);
+	}
+}
+
+void get_copy_ins(instruction* now_ins, int num_reg_first, int num_reg_second)
+{
+	instruction* new_ins = new instruction;
+	new_ins->num = now_ins->num;
+	new_ins->op = ins_copy;
+	new_ins->Rd = num_reg_first;
+	new_ins->Rs1 = num_reg_second;
+	new_ins->tRd = new_ins->tRs1 = i64;
+	new_ins->next = now_ins->next;
+	now_ins->next = new_ins;
 }
 
 /*将需要插入的copy指令插在对应指令之后*/
@@ -387,9 +439,17 @@ void add_copy_ins(Register_virtual* new_reg_first, Register_virtual* new_reg_sec
 		if (reg_it == new_reg_first->live_interval.end())
 			return;
 		if (r1 == l2 - 1)//reg2 = copy reg1
+		{
 			map_ins_copy[r1] = { new_reg_second->num,new_reg_first->num };
+			get_copy_ins(map_instruction_position[r1], new_reg_second->num,
+				new_reg_first->num);
+		}
 		if (l1 == r2 + 1)//reg1 = copy reg2
+		{
 			map_ins_copy[r2] = { new_reg_first->num,new_reg_second->num };
+			get_copy_ins(map_instruction_position[r2], new_reg_first->num,
+				new_reg_second->num);
+		}
 	}
 }
 
@@ -398,7 +458,7 @@ bool try_split(Register_virtual* now_reg, functions* now_func)
 {
 	if(now_reg->is_splited)
 		return false;
-	int op = (now_reg->type) ? 1 : 0;
+	int op = (now_reg->type == float32) ? 1 : 0;
 	Register_virtual* new_reg_first = NULL, * new_reg_second = NULL;
 	type_spliting_weight mn_value = ULLONG_MAX;
 	bool can_be_splited = false;
@@ -447,6 +507,22 @@ void spilled(Register_virtual* reg_head, functions* now_func)
 	new_variable->type = i64;
 	new_variable->num_reg = reg_head->num;
 	map_register_local[reg_head->num] = new_variable->num;
+	map_variable_position[new_variable->num] = new_variable;
+	now_func->local_tail->next = new_variable;
+	now_func->local_tail = new_variable;
+}
+
+/*为用到的物理寄存器分配空间*/
+void allocate_physical_reg(int physical_reg_num, functions* now_func)
+{
+	variable_table* new_variable = new variable_table;
+	new_variable->name = "p" + std::to_string(physical_reg_num);
+	new_variable->cnt = 1;
+	new_variable->dim = 0;
+	new_variable->num = ++total_global;
+	new_variable->type = i64;
+	new_variable->num_reg = 0;
+	now_func->map_physical_register_local[physical_reg_num] = total_global;
 	now_func->local_tail->next = new_variable;
 	now_func->local_tail = new_variable;
 }
@@ -494,7 +570,57 @@ void register_allocate(functions* now_func)
 		/*若splited，标记为spilled，不单独分配寄存器*/
 		spilled(reg_head, now_func);
 	}
+	/*记录用到的物理寄存器和caller_saved寄存器*/
+	reg_head = now_func->reg_head;
+	while (reg_head->next != NULL)
+	{
+		reg_head = reg_head->next;
+		if (reg_head->is_allocated == true)
+		{
+			int physical_reg_num = reg_head->reg_phisical;
+			now_func->used_physical_reg[physical_reg_num] = true;
+			if (physical_reg_saved[physical_reg_num / num_registers][physical_reg_num % num_registers] == caller_saved)
+				now_func->caller_saved_reg[physical_reg_num] = true;
+		}
+	}
 
 	check_register_allocate(now_func);
 
+}
+
+void get_callee_saved_reg()
+{
+	functions* now_func = func_head;
+	while (now_func->next != NULL)
+	{
+		now_func = now_func->next;
+		instruction* ins_head = now_func->ins_head;
+		while (ins_head->next != NULL)
+		{
+			ins_head = ins_head->next;
+			if (ins_head->op == ins_call)
+			{
+				int func_num = map_function[ins_head->name];
+				functions* callee_func = map_function_position[func_num];
+				/*get callee_saved regs*/
+				for (int i = 0; i < (num_registers << 1); ++i)
+				{
+					if (now_func->used_physical_reg[i] == false)
+						continue;
+					if (physical_reg_saved[i / num_registers][i % num_registers] == callee_saved)
+						callee_func->callee_saved_reg[i] = true;
+				}
+			}
+		}
+	}
+}
+
+void allocate_physical_reg(functions* now_func)
+{
+	/*分配callee_saved caller_saved的物理寄存器的栈空间*/
+	for (int i = 0; i < (num_registers << 1); ++i)
+	{
+		if (now_func->callee_saved_reg[i] == true || now_func->caller_saved_reg[i] == true)
+			allocate_physical_reg(i, now_func);
+	}
 }
